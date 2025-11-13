@@ -53,6 +53,29 @@ export async function fetchCurrentUser(): Promise<ApiUser | null> {
   }
 }
 
+export type LoginPayload = {
+  email: string
+  password: string
+}
+
+export type RegisterPayload = LoginPayload & {
+  name?: string
+}
+
+export async function loginWithEmail(payload: LoginPayload): Promise<ApiUser> {
+  return request<ApiUser>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function registerWithEmail(payload: RegisterPayload): Promise<ApiUser> {
+  return request<ApiUser>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
 export async function logout(): Promise<void> {
   await request('/api/auth/logout', { method: 'POST' }, false)
 }

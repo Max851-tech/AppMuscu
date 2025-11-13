@@ -1,13 +1,69 @@
-import type { ThemePreference } from '../utils/storage'
+import { useState } from 'react'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+import type { LoginPayload, RegisterPayload } from '../services/api'
+import type { ThemePreference } from '../utils/storage'
 
 type LoginViewProps = {
   theme: ThemePreference
   onToggleTheme: () => void
+  onLogin: (payload: LoginPayload) => Promise<void>
+  onRegister: (payload: RegisterPayload) => Promise<void>
+  isSubmitting: boolean
+  errorMessage?: string | null
 }
 
-export default function LoginView({ theme, onToggleTheme }: LoginViewProps) {
+export default function LoginView({
+  theme,
+  onToggleTheme,
+  onLogin,
+  onRegister,
+  isSubmitting,
+  errorMessage,
+}: LoginViewProps) {
+  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    name: '',
+  })
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setLocalError(null)
+
+    const email = form.email.trim().toLowerCase()
+    const password = form.password.trim()
+
+    if (!email || !password) {
+      setLocalError('Renseigne un email et un mot de passe.')
+      return
+    }
+
+    try {
+      if (mode === 'login') {
+        await onLogin({ email, password })
+      } else {
+        await onRegister({
+          email,
+          password,
+          name: form.name.trim() || undefined,
+        })
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        setLocalError(error.message)
+      } else {
+        setLocalError("Impossible d'effectuer l'action pour le moment.")
+      }
+    }
+  }
+
+  const toggleMode = () => {
+    setMode((prev) => (prev === 'login' ? 'register' : 'login'))
+    setLocalError(null)
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 px-6 py-16 text-slate-900 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <div className="absolute right-6 top-6">
@@ -30,50 +86,85 @@ export default function LoginView({ theme, onToggleTheme }: LoginViewProps) {
         </button>
       </div>
 
-      <div className="w-full max-w-lg space-y-8 text-center">
+      <div className="w-full max-w-xl space-y-8 text-center">
         <div className="space-y-3">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 text-lg font-semibold text-white shadow-lg shadow-emerald-500/40">
             AM
           </span>
           <h1 className="text-3xl font-semibold text-slate-900 dark:text-white">App Muscu</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Connecte-toi pour retrouver tes séances sauvegardées dans le cloud et suivre ta progression partout.
+            {mode === 'login'
+              ? 'Connecte-toi pour retrouver tes séances et ton suivi.'
+              : 'Crée ton espace en quelques secondes et commence à tracer tes entraînements.'}
           </p>
         </div>
 
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 rounded-2xl border border-slate-200 bg-white/90 p-6 text-left shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-black/30"
+        >
+          <div className="grid gap-4">
+            {mode === 'register' && (
+              <label className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+                Prénom ou pseudo (optionnel)
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder="Max"
+                  className="w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+                />
+              </label>
+            )}
+
+            <label className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+              Adresse email
+              <input
+                type="email"
+                value={form.email}
+                required
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                placeholder="toi@exemple.com"
+                className="w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+              />
+            </label>
+
+            <label className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-300">
+              Mot de passe
+              <input
+                type="password"
+                value={form.password}
+                required
+                minLength={8}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                placeholder="Au moins 8 caractères"
+                className="w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+              />
+            </label>
+          </div>
+
+          {(localError || errorMessage) && (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+              {localError || errorMessage}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSubmitting ? 'Traitement...' : mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
+          </button>
+        </form>
+
         <button
           type="button"
-          onClick={() => {
-            const redirect = encodeURIComponent(window.location.origin)
-            window.location.href = `${API_BASE_URL}/api/auth/google?redirect=${redirect}`
-          }}
-          className="flex w-full items-center justify-center gap-3 rounded-xl bg-slate-900 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-slate-900/30 transition hover:-translate-y-[1px] dark:bg-white dark:text-slate-900 dark:shadow-white/20"
+          onClick={toggleMode}
+          className="text-sm font-medium text-emerald-600 transition hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24">
-            <path
-              d="M21.35 11.1h-9.18v2.77h5.28c-.23 1.34-.94 2.47-2.01 3.23v2.68h3.25c1.91-1.76 3.03-4.35 3.03-7.44 0-.68-.06-1.34-.19-1.97Z"
-              fill="#4285F4"
-            />
-            <path
-              d="M12.17 21c2.73 0 5.02-.9 6.7-2.43l-3.25-2.68c-.9.6-2.06.96-3.45.96-2.65 0-4.89-1.79-5.69-4.2H3.16v2.76C4.82 18.93 8.23 21 12.17 21Z"
-              fill="#34A853"
-            />
-            <path
-              d="M6.48 12.64c-.2-.6-.32-1.25-.32-1.91 0-.66.12-1.31.32-1.91V6.06H3.16C2.42 7.45 2 9.05 2 10.73c0 1.68.42 3.28 1.16 4.67l3.32-2.76Z"
-              fill="#FBBC04"
-            />
-            <path
-              d="M12.17 5.3c1.48 0 2.8.5 3.85 1.49l2.89-2.89C17.18 2.43 14.9 1.5 12.17 1.5 8.23 1.5 4.82 3.57 3.16 6.73l3.32 2.76c.8-2.42 3.04-4.2 5.69-4.2Z"
-              fill="#EA4335"
-            />
-          </svg>
-          Continuer avec Google
+          {mode === 'login' ? "Pas encore de compte ? Inscription rapide." : 'Déjà membre ? Retour à la connexion.'}
         </button>
-
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          Tu seras redirigé vers Google pour t’authentifier en toute sécurité. Aucune donnée n’est stockée sur ton
-          appareil.
-        </p>
       </div>
     </div>
   )

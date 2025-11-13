@@ -17,7 +17,8 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ message: 'Session invalide.' })
     }
 
-    req.user = user
+    const { passwordHash, ...safeUser } = user
+    req.user = safeUser
     next()
   } catch (error) {
     console.error('[requireAuth]', error)

@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const requiredKeys = ['DATABASE_URL', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'JWT_SECRET', 'APP_BASE_URL']
+const requiredKeys = ['DATABASE_URL', 'JWT_SECRET', 'APP_BASE_URL']
 
 requiredKeys.forEach((key) => {
   if (!process.env[key]) {
@@ -18,8 +18,6 @@ const parseOrigins = (value) =>
 
 export const config = {
   databaseUrl: process.env.DATABASE_URL ?? '',
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
-  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   jwtSecret: process.env.JWT_SECRET ?? '',
   appBaseUrls: process.env.APP_BASE_URL ? parseOrigins(process.env.APP_BASE_URL) : ['http://localhost:5173'],
   apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:4000',

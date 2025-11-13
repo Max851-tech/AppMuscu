@@ -8,14 +8,14 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  googleId   String    @unique
-  email      String    @unique
-  name       String?
-  avatarUrl  String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  workouts   Workout[]
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workouts      Workout[]
 }
 
 model Workout {

@@ -97,7 +97,7 @@ export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme, 
         {user && (
           <div className="flex items-center justify-between rounded-2xl bg-slate-100/50 px-4 py-3 text-sm text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
             <div>
-              <p className="font-medium text-slate-700 dark:text-slate-200">{user.name ?? 'Compte Google'}</p>
+              <p className="font-medium text-slate-700 dark:text-slate-200">{user.name ?? 'Mon compte'}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
             </div>
             {user.avatarUrl ? (

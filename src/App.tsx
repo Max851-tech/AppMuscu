@@ -7,8 +7,12 @@ import {
   deleteWorkout,
   fetchCurrentUser,
   fetchWorkouts,
+  loginWithEmail,
   logout,
+  registerWithEmail,
   updateWorkout,
+  type LoginPayload,
+  type RegisterPayload,
   type ApiUser,
 } from './services/api'
 import { loadTheme, persistTheme, type ThemePreference } from './utils/storage'
@@ -39,6 +43,8 @@ export default function App() {
   const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false)
 
   const sortedWorkouts = useMemo(
     () => workouts.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
@@ -90,6 +96,37 @@ export default function App() {
 
     load()
   }, [user])
+
+  const handleLogin = async (payload: LoginPayload) => {
+    try {
+      setIsAuthSubmitting(true)
+      setAuthError(null)
+      const loggedInUser = await loginWithEmail(payload)
+      setUser(loggedInUser)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Identifiants invalides.'
+      setAuthError(message)
+      throw new Error(message)
+    } finally {
+      setIsAuthSubmitting(false)
+    }
+  }
+
+  const handleRegister = async (payload: RegisterPayload) => {
+    try {
+      setIsAuthSubmitting(true)
+      setAuthError(null)
+      const registeredUser = await registerWithEmail(payload)
+      setUser(registeredUser)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Impossible de créer le compte, réessaie dans un instant.'
+      setAuthError(message)
+      throw new Error(message)
+    } finally {
+      setIsAuthSubmitting(false)
+    }
+  }
 
   const handleSaveWorkout = async (draft: WorkoutDraft) => {
     if (!user) return
@@ -175,6 +212,7 @@ export default function App() {
     } finally {
       setUser(null)
       setWorkouts([])
+      setAuthError(null)
     }
   }
 
@@ -189,7 +227,16 @@ export default function App() {
   }
 
   if (!user) {
-    return <LoginView theme={theme} onToggleTheme={toggleTheme} />
+    return (
+      <LoginView
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        isSubmitting={isAuthSubmitting}
+        errorMessage={authError}
+      />
+    )
   }
 
   return (
