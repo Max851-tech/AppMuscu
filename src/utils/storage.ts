@@ -1,28 +1,6 @@
-const WORKOUTS_KEY = 'appmuscu.workouts'
 const THEME_KEY = 'appmuscu.theme'
 
 export type ThemePreference = 'light' | 'dark'
-
-export function loadWorkouts<T>(fallback: T): T {
-  if (!window.localStorage) return fallback
-  try {
-    const raw = window.localStorage.getItem(WORKOUTS_KEY)
-    if (!raw) return fallback
-    return JSON.parse(raw) as T
-  } catch (error) {
-    console.warn('Impossible de charger les séances, utilisation des valeurs par défaut.', error)
-    return fallback
-  }
-}
-
-export function persistWorkouts<T>(value: T) {
-  if (!window.localStorage) return
-  try {
-    window.localStorage.setItem(WORKOUTS_KEY, JSON.stringify(value))
-  } catch (error) {
-    console.warn('Impossible de sauvegarder les séances.', error)
-  }
-}
 
 export function loadTheme(defaultTheme: ThemePreference): ThemePreference {
   if (typeof window === 'undefined') return defaultTheme

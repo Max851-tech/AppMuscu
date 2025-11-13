@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 
+import type { ApiUser } from '../services/api'
+
 import type { ThemePreference } from '../utils/storage'
 
 const navItems: Array<{
@@ -75,9 +77,11 @@ type SidebarProps = {
   onChangeTab: (id: 'workouts' | 'stats' | 'profile') => void
   theme: ThemePreference
   onToggleTheme: () => void
+  user: ApiUser | null
+  onLogout: () => void
 }
 
-export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme }: SidebarProps) {
+export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme, user, onLogout }: SidebarProps) {
   return (
     <aside className="flex w-full flex-col gap-8 border-r border-slate-200/80 bg-white/70 px-6 py-8 backdrop-blur-lg dark:border-slate-800 dark:bg-slate-950/70 lg:w-72">
       <div className="space-y-2">
@@ -90,6 +94,25 @@ export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme }
             <p className="text-sm text-slate-500 dark:text-slate-400">Routine intelligente & simple</p>
           </div>
         </div>
+        {user && (
+          <div className="flex items-center justify-between rounded-2xl bg-slate-100/50 px-4 py-3 text-sm text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
+            <div>
+              <p className="font-medium text-slate-700 dark:text-slate-200">{user.name ?? 'Compte Google'}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{user.email}</p>
+            </div>
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.name ?? user.email}
+                className="h-10 w-10 rounded-full border border-slate-200 object-cover dark:border-slate-800"
+              />
+            ) : (
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                {(user.email ?? '?').charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <nav className="flex flex-col gap-2">
@@ -162,6 +185,19 @@ export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme }
               </svg>
             )}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-500 transition hover:border-rose-300 hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200 dark:hover:border-rose-500/60"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <path d="m15 18 6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M21 12H9" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M15 4V2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10v-2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Déconnexion
         </button>
       </div>
     </aside>

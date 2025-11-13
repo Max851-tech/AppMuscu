@@ -14,9 +14,11 @@ type WorkoutDraft = {
 
 type WorkoutsViewProps = {
   workouts: Workout[]
-  onSave: (draft: WorkoutDraft) => void
-  onDelete: (id: string) => void
-  onDuplicate: (id: string) => void
+  onSave: (draft: WorkoutDraft) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onDuplicate: (id: string) => Promise<void>
+  isLoading: boolean
+  isMutating: boolean
 }
 
 const emptyExercise = (): Exercise => ({
@@ -45,10 +47,11 @@ const intensityBadge = (volume: number) => {
 const calculateVolume = (exercises: Exercise[]) =>
   exercises.reduce((acc, exercise) => acc + exercise.sets * exercise.reps * exercise.weight, 0)
 
-export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate }: WorkoutsViewProps) {
+export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, isLoading, isMutating }: WorkoutsViewProps) {
   const [draft, setDraft] = useState<WorkoutDraft>(newDraft)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const sortedWorkouts = useMemo(
     () =>
@@ -101,7 +104,7 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate }
     setIsDirty(true)
   }
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!draft.name.trim()) return
     if (draft.exercises.length === 0) return
@@ -109,20 +112,25 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate }
     const cleanedExercises = draft.exercises.filter((exercise) => exercise.name.trim())
     if (cleanedExercises.length === 0) return
 
-    onSave({
-      ...draft,
-      exercises: cleanedExercises.map((exercise) => ({
-        ...exercise,
-        sets: Number.isFinite(exercise.sets) ? exercise.sets : 0,
-        reps: Number.isFinite(exercise.reps) ? exercise.reps : 0,
-        weight: Number.isFinite(exercise.weight) ? exercise.weight : 0,
-      })),
-    })
+    try {
+      setIsSubmitting(true)
+      await onSave({
+        ...draft,
+        exercises: cleanedExercises.map((exercise) => ({
+          ...exercise,
+          sets: Number.isFinite(exercise.sets) ? exercise.sets : 0,
+          reps: Number.isFinite(exercise.reps) ? exercise.reps : 0,
+          weight: Number.isFinite(exercise.weight) ? exercise.weight : 0,
+        })),
+      })
 
-    if (!draft.id) {
-      handleReset()
-    } else {
-      setIsDirty(false)
+      if (!draft.id) {
+        handleReset()
+      } else {
+        setIsDirty(false)
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -160,87 +168,97 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate }
           <div className="grid gap-4 sm:grid-cols-2">
             {sortedWorkouts.length === 0 && (
               <div className="glass-card col-span-full border-dashed border-slate-300 bg-slate-50/40 p-8 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
-                <p className="text-lg font-medium">Aucune séance enregistrée pour l’instant.</p>
-                <p className="mt-2 text-sm">Crée ta première routine à droite et suis ta progression.</p>
+                {isLoading ? (
+                  <p className="text-sm">Chargement de tes séances...</p>
+                ) : (
+                  <>
+                    <p className="text-lg font-medium">Aucune séance enregistrée pour l’instant.</p>
+                    <p className="mt-2 text-sm">Crée ta première routine à droite et suis ta progression.</p>
+                  </>
+                )}
               </div>
             )}
 
-            {sortedWorkouts.map((workout) => {
-              const volume = calculateVolume(workout.exercises)
-              const badge = intensityBadge(volume)
-              const isActive = selectedId === workout.id
+            {!isLoading &&
+              sortedWorkouts.map((workout) => {
+                const volume = calculateVolume(workout.exercises)
+                const badge = intensityBadge(volume)
+                const isActive = selectedId === workout.id
 
-              return (
-                <article
-                  key={workout.id}
-                        className={`glass-card flex flex-col gap-4 border px-4 py-5 transition-all ${
-                    isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectWorkout(workout)}
-                        className="text-left text-lg font-semibold text-slate-900 transition hover:text-emerald-600 dark:text-white dark:hover:text-emerald-300"
-                      >
-                        {workout.name}
-                      </button>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        {new Date(workout.date ?? workout.createdAt).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                        {workout.focusArea ? ` • ${workout.focusArea}` : ''}
-                      </p>
-                    </div>
-                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge.tone}`}>
-                      {badge.emoji} {badge.label}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-4 overflow-x-auto text-sm text-slate-500 dark:text-slate-400">
-                    {workout.exercises.slice(0, 3).map((exercise) => (
-                      <span
-                        key={exercise.id}
-                        className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800/60"
-                      >
-                        {exercise.name}
+                return (
+                  <article
+                    key={workout.id}
+                    className={`glass-card flex flex-col gap-4 border px-4 py-5 transition-all ${
+                      isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectWorkout(workout)}
+                          className="text-left text-lg font-semibold text-slate-900 transition hover:text-emerald-600 dark:text-white dark:hover:text-emerald-300"
+                        >
+                          {workout.name}
+                        </button>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          {new Date(workout.date ?? workout.createdAt).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                          {workout.focusArea ? ` • ${workout.focusArea}` : ''}
+                        </p>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${badge.tone}`}>
+                        {badge.emoji} {badge.label}
                       </span>
-                    ))}
-                    {workout.exercises.length > 3 && (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800/60">
-                        +{workout.exercises.length - 3} autres
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
-                    <span>
-                      Volume total{' '}
-                      <span className="font-semibold text-slate-900 dark:text-slate-200">{volume.toLocaleString('fr-FR')} kg</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onDuplicate(workout.id)}
-                        className="rounded-lg border border-transparent px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-900/60 dark:hover:text-white"
-                      >
-                        Dupliquer
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDelete(workout.id)}
-                        className="rounded-lg border border-transparent px-3 py-1 text-xs font-medium text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 dark:border-transparent dark:hover:border-rose-500/40 dark:hover:bg-rose-500/10"
-                      >
-                        Supprimer
-                      </button>
                     </div>
-                  </div>
-                </article>
-              )
-            })}
+
+                    <div className="flex items-center gap-4 overflow-x-auto text-sm text-slate-500 dark:text-slate-400">
+                      {workout.exercises.slice(0, 3).map((exercise) => (
+                        <span key={exercise.id} className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800/60">
+                          {exercise.name}
+                        </span>
+                      ))}
+                      {workout.exercises.length > 3 && (
+                        <span className="rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800/60">
+                          +{workout.exercises.length - 3} autres
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+                      <span>
+                        Volume total{' '}
+                        <span className="font-semibold text-slate-900 dark:text-slate-200">{volume.toLocaleString('fr-FR')} kg</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void onDuplicate(workout.id)
+                          }}
+                          disabled={isMutating}
+                          className="rounded-lg border border-transparent px-3 py-1 text-xs font-medium text-slate-500 transition hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900 dark:hover:border-slate-700 dark:hover:bg-slate-900/60 dark:hover:text-white"
+                        >
+                          Dupliquer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void onDelete(workout.id)
+                          }}
+                          disabled={isMutating}
+                          className="rounded-lg border border-transparent px-3 py-1 text-xs font-medium text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 dark:border-transparent dark:hover:border-rose-500/40 dark:hover:bg-rose-500/10"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
           </div>
         </section>
 
@@ -408,9 +426,10 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate }
               </button>
               <button
                 type="submit"
+                disabled={isSubmitting || isMutating}
                 className="rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:-translate-y-[1px]"
               >
-                {draft.id ? 'Mettre à jour la séance' : 'Sauvegarder la séance'}
+                {isSubmitting || isMutating ? 'Sauvegarde...' : draft.id ? 'Mettre à jour la séance' : 'Sauvegarder la séance'}
               </button>
             </footer>
           </form>

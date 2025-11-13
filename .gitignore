@@ -5,7 +5,8 @@ dist
 *.log
 .DS_Store
 Thumbs.db
-package-lock.json
+server/node_modules
+server/dist
 # Logs
 logs
 *.log

@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import Sidebar from './components/Sidebar'
-import type { Exercise, Workout } from './types'
-import { createUID } from './utils/id'
-import { loadTheme, loadWorkouts, persistTheme, persistWorkouts, type ThemePreference } from './utils/storage'
+import type { Workout } from './types'
+import {
+  createWorkout,
+  deleteWorkout,
+  fetchCurrentUser,
+  fetchWorkouts,
+  logout,
+  updateWorkout,
+  type ApiUser,
+} from './services/api'
+import { loadTheme, persistTheme, type ThemePreference } from './utils/storage'
 import ProfileView from './views/ProfileView'
 import StatsView from './views/StatsView'
 import WorkoutsView from './views/WorkoutsView'
+import LoginView from './views/LoginView'
 
 type Tab = 'workouts' | 'stats' | 'profile'
 
@@ -16,59 +25,25 @@ type WorkoutDraft = {
   date: string
   focusArea?: string
   notes?: string
-  exercises: Exercise[]
+  exercises: Workout['exercises']
 }
 
-const STORAGE_FALLBACK: Workout[] = []
-
-const seedWorkouts: Workout[] = [
-  {
-    id: createUID(),
-    name: 'Push explosif',
-    date: new Date().toISOString().slice(0, 10),
-    focusArea: 'Pectoraux & triceps',
-    notes: 'Très bonnes sensations, focus tempo lent à la descente.',
-    exercises: [
-      { id: createUID(), name: 'Développé couché barre', sets: 4, reps: 6, weight: 80 },
-      { id: createUID(), name: 'Dips lestés', sets: 3, reps: 10, weight: 20 },
-      { id: createUID(), name: 'Écarté poulie', sets: 3, reps: 15, weight: 18 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: createUID(),
-    name: 'Leg Day solide',
-    date: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    focusArea: 'Force & mobilité',
-    notes: 'Squat profond, travail sur la stabilité.',
-    exercises: [
-      { id: createUID(), name: 'Back squat', sets: 5, reps: 5, weight: 105 },
-      { id: createUID(), name: 'Soulevé de terre JT', sets: 4, reps: 8, weight: 80 },
-      { id: createUID(), name: 'Fentes marchées', sets: 3, reps: 12, weight: 24 },
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-]
+const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('workouts')
   const [theme, setTheme] = useState<ThemePreference>(() => (typeof window === 'undefined' ? 'light' : loadTheme('light')))
-  const [workouts, setWorkouts] = useState<Workout[]>(() => {
-    if (typeof window === 'undefined') return STORAGE_FALLBACK
-    const stored = loadWorkouts<Workout[]>(STORAGE_FALLBACK)
-    return stored.length > 0 ? stored : seedWorkouts
-  })
+  const [user, setUser] = useState<ApiUser | null>(null)
+  const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [isLoadingUser, setIsLoadingUser] = useState(true)
+  const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(false)
+  const [isMutating, setIsMutating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const sortedWorkouts = useMemo(
     () => workouts.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [workouts],
   )
-
-  useEffect(() => {
-    persistWorkouts(sortedWorkouts)
-  }, [sortedWorkouts])
 
   useEffect(() => {
     if (typeof document === 'undefined') return
@@ -78,78 +53,172 @@ export default function App() {
     persistTheme(theme)
   }, [theme])
 
-  const handleSaveWorkout = (draft: WorkoutDraft) => {
-    setWorkouts((prev) => {
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        setIsLoadingUser(true)
+        const currentUser = await fetchCurrentUser()
+        setUser(currentUser)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsLoadingUser(false)
+      }
+    }
+
+    bootstrap()
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setWorkouts([])
+      return
+    }
+
+    const load = async () => {
+      try {
+        setIsLoadingWorkouts(true)
+        const data = await fetchWorkouts()
+        setWorkouts(data)
+      } catch (err) {
+        console.error(err)
+        setError("Impossible de charger tes séances. Réessaie plus tard.")
+      } finally {
+        setIsLoadingWorkouts(false)
+      }
+    }
+
+    load()
+  }, [user])
+
+  const handleSaveWorkout = async (draft: WorkoutDraft) => {
+    if (!user) return
+    const payload = {
+      name: draft.name.trim(),
+      date: draft.date,
+      focusArea: draft.focusArea?.trim() || undefined,
+      notes: draft.notes?.trim() || undefined,
+      exercises: draft.exercises.map(({ id, name, sets, reps, weight }) => ({
+        id: draft.id ? id : undefined,
+        name: name.trim(),
+        sets,
+        reps,
+        weight,
+      })),
+    }
+
+    try {
+      setIsMutating(true)
+      setError(null)
       if (draft.id) {
-        return prev.map((existing) =>
-          existing.id === draft.id
-            ? {
-                ...existing,
-                name: draft.name.trim(),
-                date: draft.date,
-                focusArea: draft.focusArea?.trim() || undefined,
-                notes: draft.notes?.trim() || undefined,
-                exercises: draft.exercises.map((exercise) => ({ ...exercise })),
-                updatedAt: new Date().toISOString(),
-              }
-            : existing,
-        )
+        const updated = await updateWorkout(draft.id, payload)
+        setWorkouts((prev) => prev.map((item) => (item.id === updated.id ? updated : item)))
+      } else {
+        const created = await createWorkout(payload)
+        setWorkouts((prev) => [created, ...prev])
       }
-
-      const now = new Date().toISOString()
-      const newWorkout: Workout = {
-        id: createUID(),
-        name: draft.name.trim(),
-        date: draft.date,
-        focusArea: draft.focusArea?.trim() || undefined,
-        notes: draft.notes?.trim() || undefined,
-        exercises: draft.exercises.map((exercise) => ({ ...exercise })),
-        createdAt: now,
-        updatedAt: now,
-      }
-
-      return [...prev, newWorkout]
-    })
+    } catch (err) {
+      console.error(err)
+      setError("Impossible d'enregistrer la séance. Réessaie.")
+    } finally {
+      setIsMutating(false)
+    }
   }
 
-  const handleDeleteWorkout = (id: string) => {
-    setWorkouts((prev) => prev.filter((workout) => workout.id !== id))
+  const handleDeleteWorkout = async (id: string) => {
+    try {
+      setIsMutating(true)
+      setError(null)
+      await deleteWorkout(id)
+      setWorkouts((prev) => prev.filter((workout) => workout.id !== id))
+    } catch (err) {
+      console.error(err)
+      setError("Impossible de supprimer la séance. Réessaie.")
+    } finally {
+      setIsMutating(false)
+    }
   }
 
-  const handleDuplicateWorkout = (id: string) => {
-    setWorkouts((prev) => {
-      const workout = prev.find((item) => item.id === id)
-      if (!workout) return prev
+  const handleDuplicateWorkout = async (id: string) => {
+    const workout = workouts.find((item) => item.id === id)
+    if (!workout) return
 
-      const now = new Date().toISOString()
-      const duplicated: Workout = {
-        ...workout,
-        id: createUID(),
-        name: `${workout.name} (copie)`,
-        createdAt: now,
-        updatedAt: now,
-        date: new Date().toISOString().slice(0, 10),
-        exercises: workout.exercises.map((exercise) => ({ ...exercise, id: createUID() })),
-      }
+    const payload = {
+      name: `${workout.name} (copie)`,
+      date: todayISO(),
+      focusArea: workout.focusArea,
+      notes: workout.notes,
+      exercises: workout.exercises.map(({ name, sets, reps, weight }) => ({
+        name,
+        sets,
+        reps,
+        weight,
+      })),
+    }
 
-      return [...prev, duplicated]
-    })
+    try {
+      setIsMutating(true)
+      setError(null)
+      const created = await createWorkout(payload)
+      setWorkouts((prev) => [created, ...prev])
+    } catch (err) {
+      console.error(err)
+      setError("Impossible de dupliquer la séance pour l'instant.")
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      setUser(null)
+      setWorkouts([])
+    }
   }
 
   const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
 
+  if (isLoadingUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+        Chargement de ton espace...
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <LoginView theme={theme} onToggleTheme={toggleTheme} />
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900 transition dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 lg:flex-row">
-      <Sidebar activeTab={activeTab} onChangeTab={setActiveTab} theme={theme} onToggleTheme={toggleTheme} />
+      <Sidebar
+        activeTab={activeTab}
+        onChangeTab={setActiveTab}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        user={user}
+        onLogout={handleLogout}
+      />
 
       <main className="flex-1 overflow-y-auto px-6 py-10 lg:px-10">
         <div className="mx-auto flex max-w-6xl flex-col gap-8">
+          {error && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+              {error}
+            </div>
+          )}
+
           {activeTab === 'workouts' && (
             <WorkoutsView
               workouts={sortedWorkouts}
               onSave={handleSaveWorkout}
               onDelete={handleDeleteWorkout}
               onDuplicate={handleDuplicateWorkout}
+              isLoading={isLoadingWorkouts}
+              isMutating={isMutating}
             />
           )}
 
