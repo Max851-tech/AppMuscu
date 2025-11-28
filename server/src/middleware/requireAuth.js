@@ -3,14 +3,20 @@ import { prisma } from '../prisma.js'
 
 export async function requireAuth(req, res, next) {
   try {
-    const token = req.cookies?.session
+    let token = req.cookies?.auth
+
+    const authHeader = req.headers.authorization
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1]
+    }
+
     if (!token) {
       return res.status(401).json({ message: 'Non authentifié.' })
     }
 
     const payload = verifySessionToken(token)
     const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: payload.userId },
     })
 
     if (!user) {

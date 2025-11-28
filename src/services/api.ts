@@ -27,12 +27,20 @@ async function request<T>(
   options: RequestInit = {},
   parseJson = true,
 ): Promise<T> {
+  const token = localStorage.getItem('auth_token')
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers ?? {}),
+  }
+
+  if (token) {
+    // @ts-ignore
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
+    headers,
     ...options,
   })
 
@@ -63,21 +71,29 @@ export type RegisterPayload = LoginPayload & {
 }
 
 export async function loginWithEmail(payload: LoginPayload): Promise<ApiUser> {
-  return request<ApiUser>('/api/auth/login', {
+  const response = await request<{ token: string; user: ApiUser }>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+  localStorage.setItem('auth_token', response.token)
+  return response.user
 }
 
 export async function registerWithEmail(payload: RegisterPayload): Promise<ApiUser> {
-  return request<ApiUser>('/api/auth/register', {
+  const response = await request<{ token: string; user: ApiUser }>('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+  localStorage.setItem('auth_token', response.token)
+  return response.user
 }
 
 export async function logout(): Promise<void> {
-  await request('/api/auth/logout', { method: 'POST' }, false)
+  try {
+    await request('/api/auth/logout', { method: 'POST' }, false)
+  } finally {
+    localStorage.removeItem('auth_token')
+  }
 }
 
 export async function fetchWorkouts(): Promise<Workout[]> {

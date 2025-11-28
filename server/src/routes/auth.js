@@ -28,7 +28,7 @@ const clearAuthCookie = (res) => {
     secure: isProduction,
     sameSite: isProduction ? 'None' : 'Lax',
     domain: config.cookieDomain,
-  } )
+  })
 }
 
 const generateAuthToken = (user) => {
@@ -71,10 +71,13 @@ authRouter.post(
       setAuthCookie(res, token)
 
       res.status(201).json({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+        },
       })
     } catch (error) {
       console.error('[Register error]', error)
@@ -101,7 +104,7 @@ authRouter.post(
         return res.status(401).json({ message: 'Email ou mot de passe incorrect.' })
       }
 
-      const isPasswordValid = await verifyPassword(password, user.password)
+      const isPasswordValid = await verifyPassword(password, user.passwordHash)
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Email ou mot de passe incorrect.' })
       }
@@ -110,10 +113,13 @@ authRouter.post(
       setAuthCookie(res, token)
 
       res.json({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl,
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+        },
       })
     } catch (error) {
       console.error('[Login error]', error)
@@ -128,7 +134,11 @@ authRouter.post('/logout', (_req, res) => {
 })
 
 authRouter.get('/me', async (req, res) => {
-  const token = req.cookies.auth
+  let token = req.cookies.auth
+  const authHeader = req.headers.authorization
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1]
+  }
   if (!token) {
     return res.status(401).json({ message: 'Non authentifié.' })
   }
