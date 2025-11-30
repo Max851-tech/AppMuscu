@@ -7,7 +7,11 @@ type StatsViewProps = {
 }
 
 const calculateVolume = (workout: Workout) =>
-  workout.exercises.reduce((acc, exercise) => acc + exercise.sets * exercise.reps * exercise.weight, 0)
+  workout.exercises.reduce(
+    (acc, exercise) =>
+      acc + exercise.sets.reduce((setAcc, set) => setAcc + set.reps * set.weight, 0),
+    0
+  )
 
 const formatNumber = (value: number) => value.toLocaleString('fr-FR')
 
