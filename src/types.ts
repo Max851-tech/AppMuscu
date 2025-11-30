@@ -1,9 +1,15 @@
+export type ExerciseSet = {
+  id: string
+  reps: number
+  weight: number
+  rpe?: number
+  notes?: string
+}
+
 export type Exercise = {
   id: string
   name: string
-  sets: number
-  reps: number
-  weight: number
+  sets: ExerciseSet[]
 }
 
 export type Workout = {

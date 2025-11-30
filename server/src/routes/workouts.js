@@ -7,11 +7,16 @@ export const workoutsRouter = Router()
 
 workoutsRouter.use(requireAuth)
 
+const sanitizeSet = (set) => ({
+  reps: Number.parseInt(set.reps, 10) || 0,
+  weight: Number.parseInt(set.weight, 10) || 0,
+  rpe: set.rpe ? Number.parseInt(set.rpe, 10) : null,
+  notes: set.notes?.toString().trim() || null,
+})
+
 const sanitizeExercise = (exercise) => ({
   name: exercise.name?.toString().trim() ?? '',
-  sets: Number.parseInt(exercise.sets, 10) || 0,
-  reps: Number.parseInt(exercise.reps, 10) || 0,
-  weight: Number.parseInt(exercise.weight, 10) || 0,
+  sets: Array.isArray(exercise.sets) ? exercise.sets.map(sanitizeSet) : [],
 })
 
 const serializeWorkout = (workout) => ({
@@ -23,9 +28,13 @@ const serializeWorkout = (workout) => ({
   exercises: workout.exercises.map((exercise) => ({
     id: exercise.id,
     name: exercise.name,
-    sets: exercise.sets,
-    reps: exercise.reps,
-    weight: exercise.weight,
+    sets: exercise.sets.map((set) => ({
+      id: set.id,
+      reps: set.reps,
+      weight: set.weight,
+      rpe: set.rpe,
+      notes: set.notes,
+    })),
   })),
   createdAt: workout.createdAt.toISOString(),
   updatedAt: workout.updatedAt.toISOString(),
@@ -34,7 +43,13 @@ const serializeWorkout = (workout) => ({
 workoutsRouter.get('/', async (req, res) => {
   const workouts = await prisma.workout.findMany({
     where: { userId: req.user.id },
-    include: { exercises: true },
+    include: {
+      exercises: {
+        include: {
+          sets: true,
+        },
+      },
+    },
     orderBy: { date: 'desc' },
   })
 
@@ -62,10 +77,21 @@ workoutsRouter.post('/', async (req, res) => {
       notes: notes?.toString().trim() || null,
       userId: req.user.id,
       exercises: {
-        create: exercisePayload,
+        create: exercisePayload.map((ex) => ({
+          name: ex.name,
+          sets: {
+            create: ex.sets,
+          },
+        })),
       },
     },
-    include: { exercises: true },
+    include: {
+      exercises: {
+        include: {
+          sets: true,
+        },
+      },
+    },
   })
 
   res.status(201).json(serializeWorkout(workout))
@@ -104,10 +130,21 @@ workoutsRouter.put('/:id', async (req, res) => {
         focusArea: focusArea?.toString().trim() || null,
         notes: notes?.toString().trim() || null,
         exercises: {
-          create: exercisePayload,
+          create: exercisePayload.map((ex) => ({
+            name: ex.name,
+            sets: {
+              create: ex.sets,
+            },
+          })),
         },
       },
-      include: { exercises: true },
+      include: {
+        exercises: {
+          include: {
+            sets: true,
+          },
+        },
+      },
     })
   })
 

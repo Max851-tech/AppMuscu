@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 
-import type { Exercise, Workout } from '../types'
+import type { Exercise, ExerciseSet, Workout } from '../types'
 import { createUID } from '../utils/id'
 
 type WorkoutDraft = {
@@ -21,12 +21,16 @@ type WorkoutsViewProps = {
   isMutating: boolean
 }
 
+const emptySet = (): ExerciseSet => ({
+  id: createUID(),
+  reps: 10,
+  weight: 20,
+})
+
 const emptyExercise = (): Exercise => ({
   id: createUID(),
   name: '',
-  sets: 3,
-  reps: 10,
-  weight: 20,
+  sets: [emptySet()],
 })
 
 const newDraft = (): WorkoutDraft => ({
@@ -45,7 +49,11 @@ const intensityBadge = (volume: number) => {
 }
 
 const calculateVolume = (exercises: Exercise[]) =>
-  exercises.reduce((acc, exercise) => acc + exercise.sets * exercise.reps * exercise.weight, 0)
+  exercises.reduce(
+    (acc, exercise) =>
+      acc + exercise.sets.reduce((setAcc, set) => setAcc + set.reps * set.weight, 0),
+    0,
+  )
 
 export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, isLoading, isMutating }: WorkoutsViewProps) {
   const [draft, setDraft] = useState<WorkoutDraft>(newDraft)
@@ -118,9 +126,12 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
         ...draft,
         exercises: cleanedExercises.map((exercise) => ({
           ...exercise,
-          sets: Number.isFinite(exercise.sets) ? exercise.sets : 0,
-          reps: Number.isFinite(exercise.reps) ? exercise.reps : 0,
-          weight: Number.isFinite(exercise.weight) ? exercise.weight : 0,
+          sets: exercise.sets.map((set) => ({
+            ...set,
+            reps: Number.isFinite(set.reps) ? set.reps : 0,
+            weight: Number.isFinite(set.weight) ? set.weight : 0,
+            rpe: set.rpe && Number.isFinite(set.rpe) ? set.rpe : undefined,
+          })),
         })),
       })
 
@@ -188,9 +199,8 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                 return (
                   <article
                     key={workout.id}
-                    className={`glass-card flex flex-col gap-4 border px-4 py-5 transition-all ${
-                      isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
-                    }`}
+                    className={`glass-card flex flex-col gap-4 border px-4 py-5 transition-all ${isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
+                      }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -362,39 +372,119 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                               className="mt-2 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                             />
                           </label>
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            <label className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                              Séries
-                              <input
-                                type="number"
-                                min={1}
-                                value={exercise.sets}
-                                onChange={(event) => updateExercise(exercise.id, { sets: Number(event.target.value) })}
-                                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
-                              />
-                            </label>
-                            <label className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                              Répétitions
-                              <input
-                                type="number"
-                                min={1}
-                                value={exercise.reps}
-                                onChange={(event) => updateExercise(exercise.id, { reps: Number(event.target.value) })}
-                                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
-                              />
-                            </label>
-                            <label className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                              Poids (kg)
-                              <input
-                                type="number"
-                                min={0}
-                                value={exercise.weight}
-                                onChange={(event) =>
-                                  updateExercise(exercise.id, { weight: Number(event.target.value) })
-                                }
-                                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
-                              />
-                            </label>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                Séries
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateExercise(exercise.id, {
+                                    sets: [...exercise.sets, emptySet()],
+                                  })
+                                }}
+                                className="text-xs font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                              >
+                                + Ajouter une série
+                              </button>
+                            </div>
+
+                            <div className="space-y-2">
+                              {exercise.sets.map((set, setIndex) => (
+                                <div key={set.id} className="flex items-center gap-3">
+                                  <span className="w-6 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+                                    {setIndex + 1}
+                                  </span>
+                                  <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_1fr_minmax(0,1.5fr)]">
+                                    <label className="relative">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={set.reps}
+                                        onChange={(e) => {
+                                          const newSets = [...exercise.sets]
+                                          newSets[setIndex] = { ...set, reps: Number(e.target.value) }
+                                          updateExercise(exercise.id, { sets: newSets })
+                                        }}
+                                        className="w-full rounded-lg border border-slate-200 bg-white/50 px-2 py-1.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+                                        placeholder="Reps"
+                                      />
+                                      <span className="pointer-events-none absolute right-2 top-1.5 text-xs text-slate-400">
+                                        reps
+                                      </span>
+                                    </label>
+                                    <label className="relative">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={set.weight}
+                                        onChange={(e) => {
+                                          const newSets = [...exercise.sets]
+                                          newSets[setIndex] = { ...set, weight: Number(e.target.value) }
+                                          updateExercise(exercise.id, { sets: newSets })
+                                        }}
+                                        className="w-full rounded-lg border border-slate-200 bg-white/50 px-2 py-1.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+                                        placeholder="kg"
+                                      />
+                                      <span className="pointer-events-none absolute right-2 top-1.5 text-xs text-slate-400">
+                                        kg
+                                      </span>
+                                    </label>
+                                    <label className="relative hidden sm:block">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={10}
+                                        value={set.rpe ?? ''}
+                                        onChange={(e) => {
+                                          const newSets = [...exercise.sets]
+                                          newSets[setIndex] = {
+                                            ...set,
+                                            rpe: e.target.value ? Number(e.target.value) : undefined,
+                                          }
+                                          updateExercise(exercise.id, { sets: newSets })
+                                        }}
+                                        className="w-full rounded-lg border border-slate-200 bg-white/50 px-2 py-1.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
+                                        placeholder="RPE"
+                                      />
+                                      <span className="pointer-events-none absolute right-2 top-1.5 text-xs text-slate-400">
+                                        RPE
+                                      </span>
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={set.notes ?? ''}
+                                      onChange={(e) => {
+                                        const newSets = [...exercise.sets]
+                                        newSets[setIndex] = { ...set, notes: e.target.value }
+                                        updateExercise(exercise.id, { sets: newSets })
+                                      }}
+                                      className="hidden w-full rounded-lg border border-slate-200 bg-white/50 px-2 py-1.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20 sm:block"
+                                      placeholder="Notes..."
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newSets = exercise.sets.filter((_, i) => i !== setIndex)
+                                      updateExercise(exercise.id, { sets: newSets })
+                                    }}
+                                    className="text-slate-400 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400"
+                                    title="Supprimer la série"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      viewBox="0 0 20 20"
+                                      fill="currentColor"
+                                      className="h-4 w-4"
+                                    >
+                                      <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                         {draft.exercises.length > 1 && (

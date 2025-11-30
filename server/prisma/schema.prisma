@@ -36,8 +36,16 @@ model Exercise {
   workoutId String
   workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   name      String
-  sets      Int
-  reps      Int
-  weight    Int
+  sets      ExerciseSet[]
+}
+
+model ExerciseSet {
+  id         String   @id @default(uuid())
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  reps       Int
+  weight     Int
+  rpe        Int?
+  notes      String?
 }
 
