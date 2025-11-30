@@ -199,18 +199,15 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                 return (
                   <article
                     key={workout.id}
-                    className={`glass-card flex flex-col gap-4 border px-4 py-5 transition-all ${isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
+                    onClick={() => handleSelectWorkout(workout)}
+                    className={`glass-card flex cursor-pointer flex-col gap-4 border px-4 py-5 transition-all ${isActive ? 'ring-2 ring-emerald-400/60' : 'hover:ring-1 hover:ring-emerald-200/60'
                       }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectWorkout(workout)}
-                          className="text-left text-lg font-semibold text-slate-900 transition hover:text-emerald-600 dark:text-white dark:hover:text-emerald-300"
-                        >
+                        <h3 className="text-left text-lg font-semibold text-slate-900 transition hover:text-emerald-600 dark:text-white dark:hover:text-emerald-300">
                           {workout.name}
-                        </button>
+                        </h3>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           {new Date(workout.date ?? workout.createdAt).toLocaleDateString('fr-FR', {
                             day: 'numeric',
@@ -246,7 +243,8 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             void onDuplicate(workout.id)
                           }}
                           disabled={isMutating}
@@ -256,7 +254,8 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation()
                             void onDelete(workout.id)
                           }}
                           disabled={isMutating}
@@ -269,8 +268,8 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
                   </article>
                 )
               })}
-          </div>
-        </section>
+          </div >
+        </section >
 
         <section className="glass-card border px-6 py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -524,8 +523,8 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
             </footer>
           </form>
         </section>
-      </div>
-    </div>
+      </div >
+    </div >
   )
 }
 
