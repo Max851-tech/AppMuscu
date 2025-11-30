@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Navigate, Route, Routes } from 'react-router-dom'
 
 import Sidebar from './components/Sidebar'
 import type { Workout } from './types'
@@ -18,8 +19,10 @@ import {
 import { loadTheme, persistTheme, type ThemePreference } from './utils/storage'
 import ProfileView from './views/ProfileView'
 import StatsView from './views/StatsView'
-import WorkoutsView from './views/WorkoutsView'
+import { ForgotPasswordView } from './views/ForgotPasswordView'
 import LoginView from './views/LoginView'
+import { ResetPasswordView } from './views/ResetPasswordView'
+import WorkoutsView from './views/WorkoutsView'
 
 type Tab = 'workouts' | 'stats' | 'profile'
 
@@ -135,12 +138,10 @@ export default function App() {
       date: draft.date,
       focusArea: draft.focusArea?.trim() || undefined,
       notes: draft.notes?.trim() || undefined,
-      exercises: draft.exercises.map(({ id, name, sets, reps, weight }) => ({
+      exercises: draft.exercises.map(({ id, name, sets }) => ({
         id: draft.id ? id : undefined,
         name: name.trim(),
         sets,
-        reps,
-        weight,
       })),
     }
 
@@ -185,11 +186,9 @@ export default function App() {
       date: todayISO(),
       focusArea: workout.focusArea,
       notes: workout.notes,
-      exercises: workout.exercises.map(({ name, sets, reps, weight }) => ({
+      exercises: workout.exercises.map(({ name, sets }) => ({
         name,
         sets,
-        reps,
-        weight,
       })),
     }
 
@@ -226,55 +225,72 @@ export default function App() {
     )
   }
 
-  if (!user) {
-    return (
-      <LoginView
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
-        isSubmitting={isAuthSubmitting}
-        errorMessage={authError}
-      />
-    )
-  }
-
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900 transition dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 lg:flex-row">
-      <Sidebar
-        activeTab={activeTab}
-        onChangeTab={setActiveTab}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        user={user}
-        onLogout={handleLogout}
-      />
-
-      <main className="flex-1 overflow-y-auto px-6 py-10 lg:px-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8">
-          {error && (
-            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-              {error}
-            </div>
-          )}
-
-          {activeTab === 'workouts' && (
-            <WorkoutsView
-              workouts={sortedWorkouts}
-              onSave={handleSaveWorkout}
-              onDelete={handleDeleteWorkout}
-              onDuplicate={handleDuplicateWorkout}
-              isLoading={isLoadingWorkouts}
-              isMutating={isMutating}
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          user ? (
+            <Navigate to="/" />
+          ) : (
+            <LoginView
+              theme={theme}
+              onToggleTheme={toggleTheme}
+              onLogin={handleLogin}
+              onRegister={handleRegister}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authError}
             />
-          )}
+          )
+        }
+      />
+      <Route path="/forgot-password" element={<ForgotPasswordView />} />
+      <Route path="/reset-password" element={<ResetPasswordView />} />
+      <Route
+        path="/"
+        element={
+          !user ? (
+            <Navigate to="/login" />
+          ) : (
+            <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900 transition dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 lg:flex-row">
+              <Sidebar
+                activeTab={activeTab}
+                onChangeTab={setActiveTab}
+                theme={theme}
+                onToggleTheme={toggleTheme}
+                user={user}
+                onLogout={handleLogout}
+              />
 
-          {activeTab === 'stats' && <StatsView workouts={sortedWorkouts} />}
+              <main className="flex-1 overflow-y-auto px-6 py-10 lg:px-10">
+                <div className="mx-auto flex max-w-6xl flex-col gap-8">
+                  {error && (
+                    <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                      {error}
+                    </div>
+                  )}
 
-          {activeTab === 'profile' && <ProfileView />}
-        </div>
-      </main>
-    </div>
+                  {activeTab === 'workouts' && (
+                    <WorkoutsView
+                      workouts={sortedWorkouts}
+                      onSave={handleSaveWorkout}
+                      onDelete={handleDeleteWorkout}
+                      onDuplicate={handleDuplicateWorkout}
+                      isLoading={isLoadingWorkouts}
+                      isMutating={isMutating}
+                    />
+                  )}
+
+                  {activeTab === 'stats' && <StatsView workouts={sortedWorkouts} />}
+
+                  {activeTab === 'profile' && <ProfileView />}
+                </div>
+              </main>
+            </div>
+          )
+        }
+      />
+    </Routes>
   )
 }
 

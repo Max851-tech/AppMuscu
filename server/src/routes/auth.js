@@ -62,7 +62,7 @@ authRouter.post(
       const user = await prisma.user.create({
         data: {
           email,
-          password: hashedPassword,
+          passwordHash: hashedPassword,
           name,
         },
       })
@@ -165,3 +165,99 @@ authRouter.get('/me', async (req, res) => {
     res.status(401).json({ message: 'Session expirée ou invalide.' })
   }
 })
+
+authRouter.post(
+  '/forgot-password',
+  body('email').isEmail().withMessage('Email invalide'),
+  async (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() })
+    }
+
+    const { email } = req.body
+
+    try {
+      const user = await prisma.user.findUnique({ where: { email } })
+      if (!user) {
+        // On ne révèle pas si l'utilisateur existe ou non pour des raisons de sécurité
+        return res.json({ message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' })
+      }
+
+      // Générer un token unique
+      const resetToken = jwt.sign({ userId: user.id }, config.jwtSecret, { expiresIn: '1h' })
+      const resetTokenExpiry = new Date(Date.now() + 3600000) // 1 heure
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetToken,
+          resetTokenExpiry,
+        },
+      })
+
+      // Envoi de l'email (simulation)
+      const resetLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
+      console.log('---------------------------------------------------')
+      console.log('🔗 LIEN DE RÉINITIALISATION (DEV ONLY) :')
+      console.log(resetLink)
+      console.log('---------------------------------------------------')
+
+      res.json({ message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' })
+    } catch (error) {
+      console.error('[Forgot Password error]', error)
+      res.status(500).json({ message: 'Erreur interne du serveur.' })
+    }
+  },
+)
+
+authRouter.post(
+  '/reset-password',
+  body('token').notEmpty().withMessage('Token manquant'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+  async (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() })
+    }
+
+    const { token, password } = req.body
+
+    try {
+      // Vérifier le token
+      let decoded
+      try {
+        decoded = jwt.verify(token, config.jwtSecret)
+      } catch (err) {
+        return res.status(400).json({ message: 'Lien invalide ou expiré.' })
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+      })
+
+      if (!user || user.resetToken !== token || user.resetTokenExpiry < new Date()) {
+        return res.status(400).json({ message: 'Lien invalide ou expiré.' })
+      }
+
+      const hashedPassword = await hashPassword(password)
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash: hashedPassword,
+          resetToken: null,
+          resetTokenExpiry: null,
+        },
+      })
+
+      res.json({ message: 'Mot de passe réinitialisé avec succès. Tu peux maintenant te connecter.' })
+    } catch (error) {
+      console.error('[Reset Password error]', error)
+      res.status(500).json({ message: 'Erreur interne du serveur.' })
+    }
+  },
+)
+

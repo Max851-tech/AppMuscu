@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import type { LoginPayload, RegisterPayload } from '../services/api'
 import type { ThemePreference } from '../utils/storage'
@@ -130,7 +131,17 @@ export default function LoginView({
             </label>
 
             <label className="space-y-2 text-sm font-medium text-slate-600 dark:text-slate-300">
-              Mot de passe
+              <div className="flex items-center justify-between">
+                <span>Mot de passe</span>
+                {mode === 'login' && (
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
+                  >
+                    Mot de passe oublié ?
+                  </Link>
+                )}
+              </div>
               <input
                 type="password"
                 value={form.password}
