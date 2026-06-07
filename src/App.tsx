@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import Sidebar from './components/Sidebar'
@@ -17,12 +17,14 @@ import {
   type ApiUser,
 } from './services/api'
 import { loadTheme, persistTheme, type ThemePreference } from './utils/storage'
-import ProfileView from './views/ProfileView'
-import StatsView from './views/StatsView'
-import { ForgotPasswordView } from './views/ForgotPasswordView'
-import LoginView from './views/LoginView'
-import { ResetPasswordView } from './views/ResetPasswordView'
-import WorkoutsView from './views/WorkoutsView'
+
+// Lazy load views for better performance
+const ProfileView = lazy(() => import('./views/ProfileView'))
+const StatsView = lazy(() => import('./views/StatsView'))
+const ForgotPasswordView = lazy(() => import('./views/ForgotPasswordView').then(m => ({ default: m.ForgotPasswordView })))
+const LoginView = lazy(() => import('./views/LoginView'))
+const ResetPasswordView = lazy(() => import('./views/ResetPasswordView').then(m => ({ default: m.ResetPasswordView })))
+const WorkoutsView = lazy(() => import('./views/WorkoutsView'))
 
 type Tab = 'workouts' | 'stats' | 'profile'
 
@@ -225,72 +227,80 @@ export default function App() {
     )
   }
 
+  const LoadingFallback = () => (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+      Chargement...
+    </div>
+  )
+
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={
-          user ? (
-            <Navigate to="/" />
-          ) : (
-            <LoginView
-              theme={theme}
-              onToggleTheme={toggleTheme}
-              onLogin={handleLogin}
-              onRegister={handleRegister}
-              isSubmitting={isAuthSubmitting}
-              errorMessage={authError}
-            />
-          )
-        }
-      />
-      <Route path="/forgot-password" element={<ForgotPasswordView />} />
-      <Route path="/reset-password" element={<ResetPasswordView />} />
-      <Route
-        path="/"
-        element={
-          !user ? (
-            <Navigate to="/login" />
-          ) : (
-            <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900 transition dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 lg:flex-row">
-              <Sidebar
-                activeTab={activeTab}
-                onChangeTab={setActiveTab}
+    <Suspense fallback={<LoadingFallback />}>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            user ? (
+              <Navigate to="/" />
+            ) : (
+              <LoginView
                 theme={theme}
                 onToggleTheme={toggleTheme}
-                user={user}
-                onLogout={handleLogout}
+                onLogin={handleLogin}
+                onRegister={handleRegister}
+                isSubmitting={isAuthSubmitting}
+                errorMessage={authError}
               />
+            )
+          }
+        />
+        <Route path="/forgot-password" element={<ForgotPasswordView />} />
+        <Route path="/reset-password" element={<ResetPasswordView />} />
+        <Route
+          path="/"
+          element={
+            !user ? (
+              <Navigate to="/login" />
+            ) : (
+              <div className="flex min-h-screen flex-col bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-900 transition dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 lg:flex-row">
+                <Sidebar
+                  activeTab={activeTab}
+                  onChangeTab={setActiveTab}
+                  theme={theme}
+                  onToggleTheme={toggleTheme}
+                  user={user}
+                  onLogout={handleLogout}
+                />
 
-              <main className="flex-1 overflow-y-auto px-6 py-10 lg:px-10">
-                <div className="mx-auto flex max-w-6xl flex-col gap-8">
-                  {error && (
-                    <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-                      {error}
-                    </div>
-                  )}
+                <main className="flex-1 overflow-y-auto px-6 py-10 lg:px-10">
+                  <div className="mx-auto flex max-w-6xl flex-col gap-8">
+                    {error && (
+                      <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
+                        {error}
+                      </div>
+                    )}
 
-                  {activeTab === 'workouts' && (
-                    <WorkoutsView
-                      workouts={sortedWorkouts}
-                      onSave={handleSaveWorkout}
-                      onDelete={handleDeleteWorkout}
-                      onDuplicate={handleDuplicateWorkout}
-                      isLoading={isLoadingWorkouts}
-                      isMutating={isMutating}
-                    />
-                  )}
+                    {activeTab === 'workouts' && (
+                      <WorkoutsView
+                        workouts={sortedWorkouts}
+                        onSave={handleSaveWorkout}
+                        onDelete={handleDeleteWorkout}
+                        onDuplicate={handleDuplicateWorkout}
+                        isLoading={isLoadingWorkouts}
+                        isMutating={isMutating}
+                      />
+                    )}
 
-                  {activeTab === 'stats' && <StatsView workouts={sortedWorkouts} />}
+                    {activeTab === 'stats' && <StatsView workouts={sortedWorkouts} />}
 
-                  {activeTab === 'profile' && <ProfileView />}
-                </div>
-              </main>
-            </div>
-          )
-        }
-      />
-    </Routes>
+                    {activeTab === 'profile' && <ProfileView />}
+                  </div>
+                </main>
+              </div>
+            )
+          }
+        />
+      </Routes>
+    </Suspense>
   )
 }
 

@@ -138,7 +138,7 @@ export default function LoginView({
                     to="/forgot-password"
                     className="text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400"
                   >
-                    Mot de passe oublié ?
+                    Fonctionnalité à venir : Mot de passe oublié ?
                   </Link>
                 )}
               </div>

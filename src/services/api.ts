@@ -1,6 +1,7 @@
 import type { Exercise, Workout } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
+const REQUEST_TIMEOUT = 10000 // 10 seconds
 
 export type ApiUser = {
   id: string
@@ -22,6 +23,30 @@ export type WorkoutPayload = {
   >
 }
 
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeout = REQUEST_TIMEOUT,
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+    return response
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('La requête a pris trop de temps. Vérifie ta connexion.')
+    }
+    throw error
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -38,7 +63,7 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
     credentials: 'include',
     headers,
     ...options,

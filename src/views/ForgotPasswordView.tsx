@@ -33,7 +33,7 @@ export function ForgotPasswordView() {
                         <span className="text-xl font-bold text-white">AM</span>
                     </div>
                     <h2 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-                        Mot de passe oublié ?
+                        Fonctionnalité à venir : Mot de passe oublié ?
                     </h2>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                         Entre ton email pour recevoir un lien de réinitialisation.
