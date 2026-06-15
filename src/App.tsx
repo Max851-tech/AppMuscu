@@ -2,31 +2,37 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 
 import Sidebar from './components/Sidebar'
-import type { Workout } from './types'
+import type { Routine, Workout } from './types'
 import {
+  createRoutine,
   createWorkout,
+  deleteRoutine,
   deleteWorkout,
   fetchCurrentUser,
+  fetchRoutines,
   fetchWorkouts,
   loginWithEmail,
   logout,
   registerWithEmail,
+  updateRoutine,
   updateWorkout,
   type LoginPayload,
   type RegisterPayload,
   type ApiUser,
+  type RoutinePayload,
 } from './services/api'
 import { loadTheme, persistTheme, type ThemePreference } from './utils/storage'
 
 // Lazy load views for better performance
 const ProfileView = lazy(() => import('./views/ProfileView'))
+const RoutinesView = lazy(() => import('./views/RoutinesView'))
 const StatsView = lazy(() => import('./views/StatsView'))
 const ForgotPasswordView = lazy(() => import('./views/ForgotPasswordView').then(m => ({ default: m.ForgotPasswordView })))
 const LoginView = lazy(() => import('./views/LoginView'))
 const ResetPasswordView = lazy(() => import('./views/ResetPasswordView').then(m => ({ default: m.ResetPasswordView })))
 const WorkoutsView = lazy(() => import('./views/WorkoutsView'))
 
-type Tab = 'workouts' | 'stats' | 'profile'
+type Tab = 'workouts' | 'routines' | 'stats' | 'profile'
 
 type WorkoutDraft = {
   id?: string
@@ -44,8 +50,10 @@ export default function App() {
   const [theme, setTheme] = useState<ThemePreference>(() => (typeof window === 'undefined' ? 'light' : loadTheme('light')))
   const [user, setUser] = useState<ApiUser | null>(null)
   const [workouts, setWorkouts] = useState<Workout[]>([])
+  const [routines, setRoutines] = useState<Routine[]>([])
   const [isLoadingUser, setIsLoadingUser] = useState(true)
   const [isLoadingWorkouts, setIsLoadingWorkouts] = useState(false)
+  const [isLoadingRoutines, setIsLoadingRoutines] = useState(false)
   const [isMutating, setIsMutating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authError, setAuthError] = useState<string | null>(null)
@@ -83,19 +91,23 @@ export default function App() {
   useEffect(() => {
     if (!user) {
       setWorkouts([])
+      setRoutines([])
       return
     }
 
     const load = async () => {
       try {
         setIsLoadingWorkouts(true)
-        const data = await fetchWorkouts()
-        setWorkouts(data)
+        setIsLoadingRoutines(true)
+        const [workoutsData, routinesData] = await Promise.all([fetchWorkouts(), fetchRoutines()])
+        setWorkouts(workoutsData)
+        setRoutines(routinesData)
       } catch (err) {
         console.error(err)
-        setError("Impossible de charger tes séances. Réessaie plus tard.")
+        setError("Impossible de charger tes données. Réessaie plus tard.")
       } finally {
         setIsLoadingWorkouts(false)
+        setIsLoadingRoutines(false)
       }
     }
 
@@ -207,6 +219,51 @@ export default function App() {
     }
   }
 
+  const handleSaveRoutine = async (draft: RoutinePayload & { id?: string }) => {
+    if (!user) return
+    const { id: routineId, ...rest } = draft
+    const payload: RoutinePayload = {
+      name: rest.name.trim(),
+      focusArea: rest.focusArea?.trim() || undefined,
+      exercises: rest.exercises.map(({ id, name, sets }) => ({
+        id: routineId ? id : undefined,
+        name: name.trim(),
+        sets,
+      })),
+    }
+
+    try {
+      setIsMutating(true)
+      setError(null)
+      if (routineId) {
+        const updated = await updateRoutine(routineId, payload)
+        setRoutines((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+      } else {
+        const created = await createRoutine(payload)
+        setRoutines((prev) => [created, ...prev])
+      }
+    } catch (err) {
+      console.error(err)
+      setError("Impossible d'enregistrer la routine. Réessaie.")
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
+  const handleDeleteRoutine = async (id: string) => {
+    try {
+      setIsMutating(true)
+      setError(null)
+      await deleteRoutine(id)
+      setRoutines((prev) => prev.filter((r) => r.id !== id))
+    } catch (err) {
+      console.error(err)
+      setError("Impossible de supprimer la routine. Réessaie.")
+    } finally {
+      setIsMutating(false)
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await logout()
@@ -282,10 +339,21 @@ export default function App() {
                     {activeTab === 'workouts' && (
                       <WorkoutsView
                         workouts={sortedWorkouts}
+                        routines={routines}
                         onSave={handleSaveWorkout}
                         onDelete={handleDeleteWorkout}
                         onDuplicate={handleDuplicateWorkout}
                         isLoading={isLoadingWorkouts}
+                        isMutating={isMutating}
+                      />
+                    )}
+
+                    {activeTab === 'routines' && (
+                      <RoutinesView
+                        routines={routines}
+                        onSave={handleSaveRoutine}
+                        onDelete={handleDeleteRoutine}
+                        isLoading={isLoadingRoutines}
                         isMutating={isMutating}
                       />
                     )}

@@ -1,4 +1,4 @@
-import type { Exercise, Workout } from '../types'
+import type { Exercise, Routine, Workout } from '../types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000'
 const REQUEST_TIMEOUT = 10000 // 10 seconds
@@ -141,6 +141,34 @@ export async function updateWorkout(id: string, payload: WorkoutPayload): Promis
 
 export async function deleteWorkout(id: string): Promise<void> {
   await request(`/api/workouts/${id}`, { method: 'DELETE' }, false)
+}
+
+export type RoutinePayload = {
+  name: string
+  focusArea?: string
+  exercises: Array<Omit<Exercise, 'id'> & { id?: string }>
+}
+
+export async function fetchRoutines(): Promise<Routine[]> {
+  return request<Routine[]>('/api/routines')
+}
+
+export async function createRoutine(payload: RoutinePayload): Promise<Routine> {
+  return request<Routine>('/api/routines', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function updateRoutine(id: string, payload: RoutinePayload): Promise<Routine> {
+  return request<Routine>(`/api/routines/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export async function deleteRoutine(id: string): Promise<void> {
+  await request(`/api/routines/${id}`, { method: 'DELETE' }, false)
 }
 
 export async function forgotPassword(email: string): Promise<{ message: string }> {

@@ -23,6 +23,15 @@ export type Workout = {
   updatedAt: string
 }
 
+export type Routine = {
+  id: string
+  name: string
+  focusArea?: string
+  exercises: Exercise[]
+  createdAt: string
+  updatedAt: string
+}
+
 export type User = {
   id: string
   email: string

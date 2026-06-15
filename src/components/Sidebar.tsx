@@ -5,7 +5,7 @@ import type { ApiUser } from '../services/api'
 import type { ThemePreference } from '../utils/storage'
 
 const navItems: Array<{
-  id: 'workouts' | 'stats' | 'profile'
+  id: 'workouts' | 'routines' | 'stats' | 'profile'
   label: string
   description: string
   icon: ReactNode
@@ -29,6 +29,25 @@ const navItems: Array<{
         <path d="M11 12h2" />
         <path d="M3 7h18" />
         <path d="M3 15h18" />
+      </svg>
+    ),
+  },
+  {
+    id: 'routines',
+    label: 'Routines',
+    description: 'Templates & programmes',
+    icon: (
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <path d="M8 12h8M8 8h8M8 16h5" />
       </svg>
     ),
   },
@@ -73,8 +92,8 @@ const navItems: Array<{
 ]
 
 type SidebarProps = {
-  activeTab: 'workouts' | 'stats' | 'profile'
-  onChangeTab: (id: 'workouts' | 'stats' | 'profile') => void
+  activeTab: 'workouts' | 'routines' | 'stats' | 'profile'
+  onChangeTab: (id: 'workouts' | 'routines' | 'stats' | 'profile') => void
   theme: ThemePreference
   onToggleTheme: () => void
   user: ApiUser | null

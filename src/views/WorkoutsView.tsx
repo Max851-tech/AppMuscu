@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react'
 
-import type { Exercise, ExerciseSet, Workout } from '../types'
+import type { Exercise, ExerciseSet, Routine, Workout } from '../types'
 import { createUID } from '../utils/id'
 
 type WorkoutDraft = {
@@ -14,6 +14,7 @@ type WorkoutDraft = {
 
 type WorkoutsViewProps = {
   workouts: Workout[]
+  routines: Routine[]
   onSave: (draft: WorkoutDraft) => Promise<void>
   onDelete: (id: string) => Promise<void>
   onDuplicate: (id: string) => Promise<void>
@@ -55,11 +56,14 @@ const calculateVolume = (exercises: Exercise[]) =>
     0,
   )
 
-export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, isLoading, isMutating }: WorkoutsViewProps) {
+type StartMode = 'pick' | 'blank' | 'routine'
+
+export default function WorkoutsView({ workouts, routines, onSave, onDelete, onDuplicate, isLoading, isMutating }: WorkoutsViewProps) {
   const [draft, setDraft] = useState<WorkoutDraft>(newDraft)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [startMode, setStartMode] = useState<StartMode>('pick')
 
   const sortedWorkouts = useMemo(
     () =>
@@ -84,6 +88,23 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
     setSelectedId(null)
     setDraft(newDraft)
     setIsDirty(false)
+    setStartMode('pick')
+  }
+
+  const handleSelectRoutine = (routine: Routine) => {
+    setDraft({
+      name: routine.name,
+      date: new Date().toISOString().slice(0, 10),
+      focusArea: routine.focusArea ?? '',
+      notes: '',
+      exercises: routine.exercises.map((e) => ({
+        id: createUID(),
+        name: e.name,
+        sets: e.sets.map((s) => ({ id: createUID(), reps: s.reps, weight: s.weight, rpe: s.rpe ?? undefined, notes: s.notes ?? undefined })),
+      })),
+    })
+    setIsDirty(false)
+    setStartMode('blank')
   }
 
   const updateExercise = (exerciseId: string, partial: Partial<Exercise>) => {
@@ -272,6 +293,116 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
         </section >
 
         <section className="glass-card border px-6 py-6">
+          {!draft.id && startMode === 'pick' && (
+            <div className="flex h-full flex-col gap-6">
+              <header>
+                <p className="text-sm uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Nouvelle séance</p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">Comment tu veux démarrer ?</h2>
+              </header>
+
+              <div className="grid gap-4">
+                <button
+                  type="button"
+                  onClick={() => setStartMode('blank')}
+                  className="group flex flex-col items-start gap-2 rounded-2xl border-2 border-slate-200 bg-white/70 p-5 text-left transition hover:border-emerald-400/60 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-emerald-500/50"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-emerald-500/20 dark:group-hover:text-emerald-300">
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">Entraînement à vide</p>
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Séance libre, tu construis au fil de l'eau.</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStartMode('routine')}
+                  className="group flex flex-col items-start gap-2 rounded-2xl border-2 border-slate-200 bg-white/70 p-5 text-left transition hover:border-emerald-400/60 hover:shadow-lg dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-emerald-500/50"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 group-hover:bg-emerald-100 group-hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:bg-emerald-500/20 dark:group-hover:text-emerald-300">
+                    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="3" />
+                      <path d="M8 12h8M8 8h8M8 16h5" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p className="font-semibold text-slate-900 dark:text-white">Depuis une routine</p>
+                    <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                      {routines.length === 0 ? 'Crée d\'abord une routine dans l\'onglet Routines.' : `${routines.length} routine${routines.length > 1 ? 's' : ''} disponible${routines.length > 1 ? 's' : ''} — exercices pré-remplis.`}
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {startMode === 'pick' && false && null}
+            </div>
+          )}
+
+          {!draft.id && startMode === 'routine' && (
+            <div className="flex flex-col gap-6">
+              <header className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setStartMode('pick')}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400 dark:hover:border-slate-600"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </button>
+                <div>
+                  <p className="text-sm uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Depuis une routine</p>
+                  <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Choisis ton template</h2>
+                </div>
+              </header>
+
+              {routines.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  Aucune routine. Crée-en une dans l'onglet <strong>Routines</strong> d'abord.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {routines.map((routine) => (
+                    <button
+                      key={routine.id}
+                      type="button"
+                      onClick={() => handleSelectRoutine(routine)}
+                      className="group flex w-full flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white/70 p-4 text-left transition hover:border-emerald-400/60 hover:shadow-md dark:border-slate-700 dark:bg-slate-900/70 dark:hover:border-emerald-500/50"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <span className="font-semibold text-slate-900 group-hover:text-emerald-600 dark:text-white dark:group-hover:text-emerald-300">
+                          {routine.name}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                          {routine.exercises.length} exo{routine.exercises.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      {routine.focusArea && (
+                        <span className="text-sm text-slate-500 dark:text-slate-400">{routine.focusArea}</span>
+                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {routine.exercises.slice(0, 4).map((e) => (
+                          <span key={e.id} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            {e.name}
+                          </span>
+                        ))}
+                        {routine.exercises.length > 4 && (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-500 dark:bg-slate-800">
+                            +{routine.exercises.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {(draft.id || startMode === 'blank') && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <header className="flex flex-col gap-2">
               <p className="text-sm uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
@@ -522,6 +653,7 @@ export default function WorkoutsView({ workouts, onSave, onDelete, onDuplicate, 
               </button>
             </footer>
           </form>
+          )}
         </section>
       </div >
     </div >
