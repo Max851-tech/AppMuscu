@@ -18,6 +18,7 @@ model User {
   resetToken       String?
   resetTokenExpiry DateTime?
   workouts      Workout[]
+  routines      Routine[]
 }
 
 model Workout {
@@ -45,6 +46,35 @@ model ExerciseSet {
   id         String   @id @default(uuid())
   exerciseId String
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  reps       Int
+  weight     Int
+  rpe        Int?
+  notes      String?
+}
+
+model Routine {
+  id        String            @id @default(uuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  focusArea String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  exercises RoutineExercise[]
+}
+
+model RoutineExercise {
+  id        String       @id @default(uuid())
+  routineId String
+  routine   Routine      @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  name      String
+  sets      RoutineSet[]
+}
+
+model RoutineSet {
+  id         String          @id @default(uuid())
+  exerciseId String
+  exercise   RoutineExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   reps       Int
   weight     Int
   rpe        Int?

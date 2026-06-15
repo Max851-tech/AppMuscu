@@ -6,6 +6,7 @@ import helmet from 'helmet'
 import { config, isProduction } from './config.js'
 import { ensureDatabaseConnection } from './prisma.js'
 import { authRouter } from './routes/auth.js'
+import { routinesRouter } from './routes/routines.js'
 import { workoutsRouter } from './routes/workouts.js'
 
 const app = express()
@@ -33,6 +34,7 @@ app.get('/health', (_req, res) => {
 
 app.use('/api/auth', authRouter)
 app.use('/api/workouts', workoutsRouter)
+app.use('/api/routines', routinesRouter)
 
 app.use((err, _req, res, _next) => {
   console.error('[Unhandled error]', err)
