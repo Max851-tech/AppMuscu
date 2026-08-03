@@ -52,20 +52,12 @@ async function request<T>(
   options: RequestInit = {},
   parseJson = true,
 ): Promise<T> {
-  const token = localStorage.getItem('auth_token')
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers ?? {}),
-  }
-
-  if (token) {
-    // @ts-ignore
-    headers['Authorization'] = `Bearer ${token}`
-  }
-
   const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
     credentials: 'include',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers ?? {}),
+    },
     ...options,
   })
 
@@ -96,29 +88,23 @@ export type RegisterPayload = LoginPayload & {
 }
 
 export async function loginWithEmail(payload: LoginPayload): Promise<ApiUser> {
-  const response = await request<{ token: string; user: ApiUser }>('/api/auth/login', {
+  const response = await request<{ user: ApiUser }>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  localStorage.setItem('auth_token', response.token)
   return response.user
 }
 
 export async function registerWithEmail(payload: RegisterPayload): Promise<ApiUser> {
-  const response = await request<{ token: string; user: ApiUser }>('/api/auth/register', {
+  const response = await request<{ user: ApiUser }>('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  localStorage.setItem('auth_token', response.token)
   return response.user
 }
 
 export async function logout(): Promise<void> {
-  try {
-    await request('/api/auth/logout', { method: 'POST' }, false)
-  } finally {
-    localStorage.removeItem('auth_token')
-  }
+  await request('/api/auth/logout', { method: 'POST' }, false)
 }
 
 export async function fetchWorkouts(): Promise<Workout[]> {
@@ -184,4 +170,3 @@ export async function resetPassword(token: string, password: string): Promise<{ 
     body: JSON.stringify({ token, password }),
   })
 }
-

@@ -4,21 +4,18 @@ import jwt from 'jsonwebtoken'
 
 import { config, isProduction } from '../config.js'
 import { prisma } from '../prisma.js'
+import { authLimiter } from '../middleware/rateLimiter.js'
 import { hashPassword, verifyPassword } from '../utils/password.js'
 
 export const authRouter = Router()
 
 const setAuthCookie = (res, token) => {
-  const isProduction = process.env.NODE_ENV === 'production'
-
   res.cookie('auth', token, {
     httpOnly: true,
-    // DEBUT DE LA MODIFICATION
-    secure: isProduction, // Doit être true en production (HTTPS )
-    sameSite: isProduction ? 'None' : 'Lax', // Doit être 'None' en production pour les requêtes cross-site
-    // FIN DE LA MODIFICATION
+    secure: isProduction,
+    sameSite: isProduction ? 'None' : 'Lax',
     domain: config.cookieDomain,
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 jours
+    maxAge: 1000 * 60 * 60 * 24 * 7,
   })
 }
 
@@ -39,6 +36,7 @@ const generateAuthToken = (user) => {
 
 authRouter.post(
   '/register',
+  authLimiter,
   body('email').isEmail().withMessage('Email invalide'),
   body('password')
     .isLength({ min: 6 })
@@ -71,7 +69,6 @@ authRouter.post(
       setAuthCookie(res, token)
 
       res.status(201).json({
-        token,
         user: {
           id: user.id,
           email: user.email,
@@ -88,6 +85,7 @@ authRouter.post(
 
 authRouter.post(
   '/login',
+  authLimiter,
   body('email').isEmail().withMessage('Email invalide'),
   body('password').notEmpty().withMessage('Le mot de passe est requis'),
   async (req, res) => {
@@ -113,7 +111,6 @@ authRouter.post(
       setAuthCookie(res, token)
 
       res.json({
-        token,
         user: {
           id: user.id,
           email: user.email,
@@ -134,11 +131,7 @@ authRouter.post('/logout', (_req, res) => {
 })
 
 authRouter.get('/me', async (req, res) => {
-  let token = req.cookies.auth
-  const authHeader = req.headers.authorization
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1]
-  }
+  const token = req.cookies?.auth
   if (!token) {
     return res.status(401).json({ message: 'Non authentifié.' })
   }
@@ -168,6 +161,7 @@ authRouter.get('/me', async (req, res) => {
 
 authRouter.post(
   '/forgot-password',
+  authLimiter,
   body('email').isEmail().withMessage('Email invalide'),
   async (req, res) => {
     const errors = validationResult(req)
@@ -180,13 +174,11 @@ authRouter.post(
     try {
       const user = await prisma.user.findUnique({ where: { email } })
       if (!user) {
-        // On ne révèle pas si l'utilisateur existe ou non pour des raisons de sécurité
         return res.json({ message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' })
       }
 
-      // Générer un token unique
       const resetToken = jwt.sign({ userId: user.id }, config.jwtSecret, { expiresIn: '1h' })
-      const resetTokenExpiry = new Date(Date.now() + 3600000) // 1 heure
+      const resetTokenExpiry = new Date(Date.now() + 3600000)
 
       await prisma.user.update({
         where: { id: user.id },
@@ -196,10 +188,9 @@ authRouter.post(
         },
       })
 
-      // Envoi de l'email (simulation)
       const resetLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
       console.log('---------------------------------------------------')
-      console.log('🔗 LIEN DE RÉINITIALISATION (DEV ONLY) :')
+      console.log('LIEN DE RÉINITIALISATION (DEV ONLY) :')
       console.log(resetLink)
       console.log('---------------------------------------------------')
 
@@ -213,6 +204,7 @@ authRouter.post(
 
 authRouter.post(
   '/reset-password',
+  authLimiter,
   body('token').notEmpty().withMessage('Token manquant'),
   body('password')
     .isLength({ min: 6 })
@@ -226,7 +218,6 @@ authRouter.post(
     const { token, password } = req.body
 
     try {
-      // Vérifier le token
       let decoded
       try {
         decoded = jwt.verify(token, config.jwtSecret)
@@ -260,4 +251,3 @@ authRouter.post(
     }
   },
 )
-

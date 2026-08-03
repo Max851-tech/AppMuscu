@@ -5,6 +5,7 @@ import helmet from 'helmet'
 
 import { config, isProduction } from './config.js'
 import { ensureDatabaseConnection } from './prisma.js'
+import { globalLimiter } from './middleware/rateLimiter.js'
 import { authRouter } from './routes/auth.js'
 import { routinesRouter } from './routes/routines.js'
 import { workoutsRouter } from './routes/workouts.js'
@@ -26,6 +27,7 @@ app.use(
   }),
 )
 
+app.use(globalLimiter)
 app.use(cookieParser())
 app.use(express.json())
 app.get('/health', (_req, res) => {
@@ -68,4 +70,3 @@ ensureDatabaseConnection()
     console.error('Impossible de se connecter à la base de données:', error)
     process.exit(1)
   })
-

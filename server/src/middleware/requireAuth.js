@@ -3,12 +3,7 @@ import { prisma } from '../prisma.js'
 
 export async function requireAuth(req, res, next) {
   try {
-    let token = req.cookies?.auth
-
-    const authHeader = req.headers.authorization
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1]
-    }
+    const token = req.cookies?.auth
 
     if (!token) {
       return res.status(401).json({ message: 'Non authentifié.' })
@@ -31,4 +26,3 @@ export async function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Authentification requise.' })
   }
 }
-
