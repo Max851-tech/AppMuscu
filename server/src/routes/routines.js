@@ -9,7 +9,7 @@ routinesRouter.use(requireAuth)
 
 const sanitizeSet = (set) => ({
   reps: Number.parseInt(set.reps, 10) || 0,
-  weight: Number.parseInt(set.weight, 10) || 0,
+  weight: Number.parseFloat(set.weight) || 0,
   rpe: set.rpe ? Number.parseInt(set.rpe, 10) : null,
   notes: set.notes?.toString().trim() || null,
 })

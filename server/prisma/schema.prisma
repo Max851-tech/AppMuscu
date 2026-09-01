@@ -47,7 +47,7 @@ model ExerciseSet {
   exerciseId String
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   reps       Int
-  weight     Int
+  weight     Float
   rpe        Int?
   notes      String?
 }
@@ -76,7 +76,7 @@ model RoutineSet {
   exerciseId String
   exercise   RoutineExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   reps       Int
-  weight     Int
+  weight     Float
   rpe        Int?
   notes      String?
 }
