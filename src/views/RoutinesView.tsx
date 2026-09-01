@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 
 import type { Exercise, ExerciseSet, Routine } from '../types'
 import { createUID } from '../utils/id'
+import { parseDecimal } from '../utils/number'
 
 type RoutineDraft = {
   id?: string
@@ -27,6 +28,9 @@ export default function RoutinesView({ routines, onSave, onDelete, isLoading, is
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Texte brut des champs poids en cours de saisie (permet de taper "7," sans que la
+  // valeur numérique convertie n'efface la virgule avant que l'utilisateur ait fini).
+  const [weightDrafts, setWeightDrafts] = useState<Record<string, string>>({})
 
   const handleSelectRoutine = (routine: Routine) => {
     setSelectedId(routine.id)
@@ -37,12 +41,14 @@ export default function RoutinesView({ routines, onSave, onDelete, isLoading, is
       exercises: routine.exercises.map((e) => ({ ...e })),
     })
     setIsDirty(false)
+    setWeightDrafts({})
   }
 
   const handleReset = () => {
     setSelectedId(null)
     setDraft(newDraft())
     setIsDirty(false)
+    setWeightDrafts({})
   }
 
   const updateExercise = (exerciseId: string, partial: Partial<Exercise>) => {
@@ -300,14 +306,22 @@ export default function RoutinesView({ routines, onSave, onDelete, isLoading, is
                                 </label>
                                 <label className="relative">
                                   <input
-                                    type="number"
-                                    min={0}
-                                    step={0.5}
-                                    value={set.weight}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={weightDrafts[set.id] ?? String(set.weight)}
                                     onChange={(e) => {
+                                      const raw = e.target.value
+                                      if (!/^[0-9]*[.,]?[0-9]*$/.test(raw)) return
+                                      setWeightDrafts((prev) => ({ ...prev, [set.id]: raw }))
                                       const newSets = [...exercise.sets]
-                                      newSets[setIndex] = { ...set, weight: Number(e.target.value) }
+                                      newSets[setIndex] = { ...set, weight: parseDecimal(raw) }
                                       updateExercise(exercise.id, { sets: newSets })
+                                    }}
+                                    onBlur={() => {
+                                      setWeightDrafts((prev) => {
+                                        const { [set.id]: _removed, ...rest } = prev
+                                        return rest
+                                      })
                                     }}
                                     className="w-full rounded-lg border border-slate-200 bg-white/50 px-2 py-1.5 text-sm text-slate-900 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200/40 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20"
                                   />
