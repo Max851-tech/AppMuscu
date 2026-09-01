@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { createUID } from '../utils/id'
-import { loadTheme, persistTheme, type ThemePreference } from '../utils/storage'
+import { loadTheme, persistTheme } from '../utils/storage'
 
 describe('createUID', () => {
   it('returns a non-empty string', () => {
