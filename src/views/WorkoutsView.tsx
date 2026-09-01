@@ -548,6 +548,7 @@ export default function WorkoutsView({ workouts, routines, onSave, onDelete, onD
                                       <input
                                         type="number"
                                         min={0}
+                                        step={0.5}
                                         value={set.weight}
                                         onChange={(e) => {
                                           const newSets = [...exercise.sets]

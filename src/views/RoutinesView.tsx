@@ -302,6 +302,7 @@ export default function RoutinesView({ routines, onSave, onDelete, isLoading, is
                                   <input
                                     type="number"
                                     min={0}
+                                    step={0.5}
                                     value={set.weight}
                                     onChange={(e) => {
                                       const newSets = [...exercise.sets]
