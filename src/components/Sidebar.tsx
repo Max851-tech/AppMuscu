@@ -206,6 +206,17 @@ export default function Sidebar({ activeTab, onChangeTab, theme, onToggleTheme, 
           </span>
         </button>
 
+        <a
+          href="mailto:m.russon.job@gmail.com"
+          className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/70 px-4 py-2.5 text-xs text-slate-500 transition hover:-translate-y-[1px] hover:shadow-lg dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400"
+        >
+          <svg className="h-4 w-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          <span>Un problème ? <span className="font-medium text-slate-700 dark:text-slate-300">m.russon.job@gmail.com</span></span>
+        </a>
+
         <button
           type="button"
           onClick={onLogout}
