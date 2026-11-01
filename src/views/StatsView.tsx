@@ -1,17 +1,13 @@
 import { useMemo } from 'react'
 
 import type { Workout } from '../types'
+import { calculateVolume } from '../utils/workoutStats'
 
 type StatsViewProps = {
   workouts: Workout[]
 }
 
-const calculateVolume = (workout: Workout) =>
-  workout.exercises.reduce(
-    (acc, exercise) =>
-      acc + exercise.sets.reduce((setAcc, set) => setAcc + set.reps * set.weight, 0),
-    0
-  )
+const workoutVolume = (workout: Workout) => calculateVolume(workout.exercises)
 
 const formatNumber = (value: number) => value.toLocaleString('fr-FR')
 
@@ -30,7 +26,7 @@ export default function StatsView({ workouts }: StatsViewProps) {
 
     const totals = workouts.map((workout) => ({
       workout,
-      volume: calculateVolume(workout),
+      volume: workoutVolume(workout),
     }))
 
     const totalVolume = totals.reduce((acc, { volume }) => acc + volume, 0)
@@ -110,7 +106,7 @@ export default function StatsView({ workouts }: StatsViewProps) {
           {stats.bestSession && (
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {new Date(stats.bestSession.date).toLocaleDateString('fr-FR')} •{' '}
-              {formatNumber(calculateVolume(stats.bestSession))} kg
+              {formatNumber(workoutVolume(stats.bestSession))} kg
             </p>
           )}
         </div>
@@ -256,7 +252,7 @@ export default function StatsView({ workouts }: StatsViewProps) {
                     </td>
                     <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{workout.exercises.length}</td>
                     <td className="px-4 py-3 text-slate-900 dark:text-slate-200">
-                      {formatNumber(calculateVolume(workout))} kg
+                      {formatNumber(workoutVolume(workout))} kg
                     </td>
                   </tr>
                 ))}

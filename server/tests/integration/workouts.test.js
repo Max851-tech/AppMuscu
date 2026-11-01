@@ -11,6 +11,7 @@ vi.mock('../../src/prisma.js', () => ({
       findMany: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn(),
     },
     exercise: { deleteMany: vi.fn() },
@@ -131,6 +132,109 @@ describe('Workouts API — /api/workouts', () => {
         .send({ name: 'Leg Day', date: '2026-01-15', exercises: [] })
 
       expect(res.status).toBe(400)
+    })
+  })
+
+  describe('PUT /api/workouts/:id', () => {
+    it('updates an existing workout', async () => {
+      prisma.workout.findFirst.mockResolvedValue(mockWorkout)
+      const updated = { ...mockWorkout, name: 'Pull Day' }
+      prisma.$transaction.mockImplementation(async (fn) => {
+        prisma.workout.update.mockResolvedValue(updated)
+        return fn(prisma)
+      })
+
+      const res = await request(app)
+        .put('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({
+          name: 'Pull Day',
+          date: '2026-01-15',
+          exercises: [
+            { name: 'Barbell Row', sets: [{ reps: 10, weight: 70 }] },
+          ],
+        })
+
+      expect(res.status).toBe(200)
+      expect(res.body.name).toBe('Pull Day')
+    })
+
+    it('returns 400 when name is missing', async () => {
+      prisma.workout.findFirst.mockResolvedValue(mockWorkout)
+
+      const res = await request(app)
+        .put('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({
+          date: '2026-01-15',
+          exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }],
+        })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when exercises are empty', async () => {
+      prisma.workout.findFirst.mockResolvedValue(mockWorkout)
+
+      const res = await request(app)
+        .put('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({ name: 'Push Day', date: '2026-01-15', exercises: [] })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 404 for non-existent workout', async () => {
+      prisma.workout.findFirst.mockResolvedValue(null)
+
+      const res = await request(app)
+        .put('/api/workouts/unknown-id')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({
+          name: 'Push Day',
+          date: '2026-01-15',
+          exercises: [{ name: 'Bench Press', sets: [{ reps: 10, weight: 80 }] }],
+        })
+
+      expect(res.status).toBe(404)
+    })
+  })
+
+  describe('Ownership — another user cannot access workouts', () => {
+    const otherToken = () => signSessionToken({ userId: 'user-2' })
+
+    beforeEach(() => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-2',
+        email: 'other@example.com',
+        name: 'Other',
+        avatarUrl: null,
+      })
+    })
+
+    it('PUT returns 404 for another user workout', async () => {
+      prisma.workout.findFirst.mockResolvedValue(null)
+
+      const res = await request(app)
+        .put('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${otherToken()}`])
+        .send({
+          name: 'Hijack',
+          date: '2026-01-15',
+          exercises: [{ name: 'Bench', sets: [{ reps: 10, weight: 80 }] }],
+        })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('DELETE returns 404 for another user workout', async () => {
+      prisma.workout.findFirst.mockResolvedValue(null)
+
+      const res = await request(app)
+        .delete('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${otherToken()}`])
+
+      expect(res.status).toBe(404)
     })
   })
 

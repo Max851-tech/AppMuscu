@@ -107,10 +107,10 @@ Lance le backend + une base PostgreSQL locale.
 ## Tests
 
 ```bash
-# Frontend (23 tests)
+# Frontend (32 tests)
 npm test
 
-# Backend (50 tests)
+# Backend (66 tests)
 cd server && npm test
 ```
 

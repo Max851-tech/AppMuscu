@@ -48,7 +48,7 @@ Crée un nouveau compte utilisateur.
 | Champ | Type | Requis | Validation |
 |-------|------|--------|-----------|
 | `email` | string | oui | Format email valide |
-| `password` | string | oui | Minimum 6 caractères |
+| `password` | string | oui | Minimum 8 caractères |
 | `name` | string | non | — |
 
 **Réponses** :

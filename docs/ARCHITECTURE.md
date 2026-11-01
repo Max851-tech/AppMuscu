@@ -213,9 +213,9 @@ push / PR → master
     │
     ├── Lint & Build ──→ TypeScript check + build production
     │
-    ├── Tests Frontend ──→ Vitest (23 tests)
+    ├── Tests Frontend ──→ Vitest (32 tests)
     │
-    ├── Tests Backend ──→ Vitest (50 tests)
+    ├── Tests Backend ──→ Vitest (66 tests)
     │
     └── Docker Build ──→ Build image + vérification démarrage
          (après succès des 3 étapes précédentes)
