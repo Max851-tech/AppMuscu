@@ -21,7 +21,7 @@ describe('Auth API — /api/auth', () => {
   })
 
   describe('POST /api/auth/register', () => {
-    it('returns 201 with a new user on valid data', async () => {
+    it('returns 201 with HttpOnly cookie and no token in body', async () => {
       prisma.user.findUnique.mockResolvedValue(null)
       prisma.user.create.mockResolvedValue({
         id: 'new-user-id',
@@ -38,8 +38,11 @@ describe('Auth API — /api/auth', () => {
       expect(res.status).toBe(201)
       expect(res.body.user.email).toBe('test@example.com')
       expect(res.body.user.name).toBe('Max')
-      expect(res.body.token).toBeDefined()
       expect(res.body.user.passwordHash).toBeUndefined()
+      expect(res.body.token).toBeUndefined()
+      const cookies = res.headers['set-cookie']
+      expect(cookies).toBeDefined()
+      expect(cookies.some((c) => c.startsWith('auth=') && c.includes('HttpOnly'))).toBe(true)
     })
 
     it('returns 409 when email already exists', async () => {
@@ -67,10 +70,35 @@ describe('Auth API — /api/auth', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('returns 400 when password has 7 characters (boundary)', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'Abcde7!' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 201 when password has exactly 8 characters (boundary)', async () => {
+      prisma.user.findUnique.mockResolvedValue(null)
+      prisma.user.create.mockResolvedValue({
+        id: 'new-user-id',
+        email: 'test@example.com',
+        name: null,
+        avatarUrl: null,
+        passwordHash: 'hashed',
+      })
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'test@example.com', password: 'Abcdef8!' })
+
+      expect(res.status).toBe(201)
+    })
   })
 
   describe('POST /api/auth/login', () => {
-    it('returns 200 with token on valid credentials', async () => {
+    it('returns 200 with HttpOnly cookie and no token in body', async () => {
       const hashed = await hashPassword('password123')
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
@@ -85,8 +113,11 @@ describe('Auth API — /api/auth', () => {
         .send({ email: 'test@example.com', password: 'password123' })
 
       expect(res.status).toBe(200)
-      expect(res.body.token).toBeDefined()
       expect(res.body.user.email).toBe('test@example.com')
+      expect(res.body.token).toBeUndefined()
+      const cookies = res.headers['set-cookie']
+      expect(cookies).toBeDefined()
+      expect(cookies.some((c) => c.startsWith('auth=') && c.includes('HttpOnly'))).toBe(true)
     })
 
     it('returns 401 on wrong password', async () => {
@@ -134,34 +165,40 @@ describe('Auth API — /api/auth', () => {
   })
 
   describe('GET /api/auth/me', () => {
-    it('returns user when authenticated via Bearer token', async () => {
-      const token = signSessionToken({ userId: 'user-1' })
+    it('returns user when authenticated via cookie', async () => {
+      const hashed = await hashPassword('password123')
       prisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
         name: 'Max',
         avatarUrl: null,
-        passwordHash: 'hashed',
+        passwordHash: hashed,
       })
 
-      const res = await request(app)
-        .get('/api/auth/me')
-        .set('Authorization', `Bearer ${token}`)
+      const agent = request.agent(app)
+
+      await agent
+        .post('/api/auth/login')
+        .send({ email: 'test@example.com', password: 'password123' })
+
+      const res = await agent.get('/api/auth/me')
 
       expect(res.status).toBe(200)
       expect(res.body.email).toBe('test@example.com')
       expect(res.body.passwordHash).toBeUndefined()
     })
 
-    it('returns 401 without token', async () => {
+    it('returns 401 without cookie', async () => {
       const res = await request(app).get('/api/auth/me')
       expect(res.status).toBe(401)
     })
 
-    it('returns 401 with expired/invalid token', async () => {
+    it('returns 401 when using Bearer token instead of cookie', async () => {
+      const token = signSessionToken({ userId: 'user-1' })
+
       const res = await request(app)
         .get('/api/auth/me')
-        .set('Authorization', 'Bearer invalid-token-here')
+        .set('Authorization', `Bearer ${token}`)
 
       expect(res.status).toBe(401)
     })
@@ -225,6 +262,33 @@ describe('Auth API — /api/auth', () => {
         .send({ token, password: '123' })
 
       expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when password has 7 characters (boundary)', async () => {
+      const token = signSessionToken({ userId: 'user-1' })
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, password: 'Abcde7!' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('resets password when it has exactly 8 characters (boundary)', async () => {
+      const token = signSessionToken({ userId: 'user-1' })
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        resetToken: token,
+        resetTokenExpiry: new Date(Date.now() + 3600000),
+      })
+      prisma.user.update.mockResolvedValue({})
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, password: 'Abcdef8!' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toContain('réinitialisé')
     })
 
     it('resets password with valid token', async () => {

@@ -62,7 +62,7 @@ describe('Routines API — /api/routines', () => {
 
       const res = await request(app)
         .get('/api/routines')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(200)
       expect(res.body).toHaveLength(1)
@@ -77,7 +77,7 @@ describe('Routines API — /api/routines', () => {
 
       const res = await request(app)
         .post('/api/routines')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({
           name: 'PPL Push',
           focusArea: 'Pectoraux',
@@ -93,7 +93,7 @@ describe('Routines API — /api/routines', () => {
     it('returns 400 when name is missing', async () => {
       const res = await request(app)
         .post('/api/routines')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({ exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
 
       expect(res.status).toBe(400)
@@ -102,7 +102,7 @@ describe('Routines API — /api/routines', () => {
     it('returns 400 when no exercises provided', async () => {
       const res = await request(app)
         .post('/api/routines')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({ name: 'Empty Routine', exercises: [] })
 
       expect(res.status).toBe(400)
@@ -116,7 +116,7 @@ describe('Routines API — /api/routines', () => {
 
       const res = await request(app)
         .delete('/api/routines/routine-1')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(204)
     })
@@ -126,7 +126,7 @@ describe('Routines API — /api/routines', () => {
 
       const res = await request(app)
         .delete('/api/routines/unknown-id')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(404)
     })

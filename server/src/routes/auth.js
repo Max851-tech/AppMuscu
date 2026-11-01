@@ -39,8 +39,8 @@ authRouter.post(
   authLimiter,
   body('email').isEmail().withMessage('Email invalide'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+    .isLength({ min: 8 })
+    .withMessage('Le mot de passe doit contenir au moins 8 caractères'),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
@@ -207,8 +207,8 @@ authRouter.post(
   authLimiter,
   body('token').notEmpty().withMessage('Token manquant'),
   body('password')
-    .isLength({ min: 6 })
-    .withMessage('Le mot de passe doit contenir au moins 6 caractères'),
+    .isLength({ min: 8 })
+    .withMessage('Le mot de passe doit contenir au moins 8 caractères'),
   async (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) {

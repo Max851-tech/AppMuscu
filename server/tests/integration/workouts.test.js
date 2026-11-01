@@ -65,7 +65,7 @@ describe('Workouts API — /api/workouts', () => {
 
       const res = await request(app)
         .get('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(200)
       expect(Array.isArray(res.body)).toBe(true)
@@ -79,7 +79,7 @@ describe('Workouts API — /api/workouts', () => {
 
       const res = await request(app)
         .get('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(200)
       expect(res.body).toEqual([])
@@ -92,7 +92,7 @@ describe('Workouts API — /api/workouts', () => {
 
       const res = await request(app)
         .post('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({
           name: 'Push Day',
           date: '2026-01-15',
@@ -109,7 +109,7 @@ describe('Workouts API — /api/workouts', () => {
     it('returns 400 when name is missing', async () => {
       const res = await request(app)
         .post('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({ date: '2026-01-15', exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
 
       expect(res.status).toBe(400)
@@ -118,7 +118,7 @@ describe('Workouts API — /api/workouts', () => {
     it('returns 400 when date is missing', async () => {
       const res = await request(app)
         .post('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({ name: 'Leg Day', exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
 
       expect(res.status).toBe(400)
@@ -127,7 +127,7 @@ describe('Workouts API — /api/workouts', () => {
     it('returns 400 when exercises array is empty', async () => {
       const res = await request(app)
         .post('/api/workouts')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
         .send({ name: 'Leg Day', date: '2026-01-15', exercises: [] })
 
       expect(res.status).toBe(400)
@@ -141,7 +141,7 @@ describe('Workouts API — /api/workouts', () => {
 
       const res = await request(app)
         .delete('/api/workouts/workout-1')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(204)
     })
@@ -151,7 +151,7 @@ describe('Workouts API — /api/workouts', () => {
 
       const res = await request(app)
         .delete('/api/workouts/unknown-id')
-        .set('Authorization', `Bearer ${makeToken()}`)
+        .set('Cookie', [`auth=${makeToken()}`])
 
       expect(res.status).toBe(404)
     })
