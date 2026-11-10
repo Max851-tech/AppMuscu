@@ -135,4 +135,5 @@ Voir [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) section Déploiement pour le
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Architecture applicative détaillée
 - [`docs/API.md`](docs/API.md) — Documentation complète de l'API REST
 - [`docs/DATABASE.md`](docs/DATABASE.md) — Schéma et modèle de données
+- [`docs/conception/`](docs/conception/README.md) — Conception de la BDD : MCD (Mocodo), MLD, MPD (SQL), dictionnaire de données, cardinalités
 - [`NETLIFY.md`](NETLIFY.md) — Configuration Netlify
