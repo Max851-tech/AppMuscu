@@ -1,0 +1,38 @@
+%% MCD AppMuscu — script Mocodo (https://www.mocodo.net)
+%% Source de vérité : server/prisma/schema.prisma et server/prisma/migrations/
+%% Les noms d'entités et d'attributs reprennent exactement ceux du code.
+%% Le premier attribut de chaque entité est son identifiant (souligné).
+%% Les clés étrangères (userId, workoutId, ...) n'apparaissent pas dans un MCD :
+%% elles sont déduites des associations lors du passage au MLD.
+%% Le chiffre final d'un nom d'association (CONTENIR1, CONTENIR2) n'est pas affiché
+%% par Mocodo : il sert seulement à distinguer deux associations de même verbe.
+
+Workout: id, name, date, focusArea, notes, createdAt, updatedAt
+POSSÉDER, 0N User, 11 Workout
+User: id, email, passwordHash, name, avatarUrl, createdAt, updatedAt, resetToken, resetTokenExpiry
+CRÉER, 0N User, 11 Routine
+Routine: id, name, focusArea, createdAt, updatedAt
+
+CONTENIR1, 1N Workout, 11 Exercise
+:
+:
+:
+CONTENIR2, 1N Routine, 11 RoutineExercise
+
+Exercise: id, name
+:
+:
+:
+RoutineExercise: id, name
+
+COMPORTER1, 0N Exercise, 11 ExerciseSet
+:
+:
+:
+COMPORTER2, 0N RoutineExercise, 11 RoutineSet
+
+ExerciseSet: id, reps, weight, rpe, notes
+:
+:
+:
+RoutineSet: id, reps, weight, rpe, notes

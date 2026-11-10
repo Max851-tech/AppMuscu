@@ -4,7 +4,9 @@
 
 - **PostgreSQL** hébergé sur **Neon** (serverless)
 - ORM : **Prisma** avec migrations versionnées
-- Identifiants : UUID v4 pour toutes les tables
+- Identifiants : UUID v4 pour toutes les tables, générés par le client Prisma (`@default(uuid())`) et stockés en `TEXT` (pas de type `UUID` PostgreSQL)
+
+Documents de conception détaillés (MCD, MLD, MPD, dictionnaire de données, justification des cardinalités) : [`docs/conception/`](conception/README.md).
 
 ## Schéma relationnel
 
@@ -12,7 +14,7 @@
 ┌──────────────────────┐
 │        User          │
 ├──────────────────────┤
-│ PK  id          UUID │
+│ PK  id          TEXT │
 │     email     UNIQUE │
 │     passwordHash     │
 │     name         ?   │
@@ -32,8 +34,8 @@
 ┌──────────────────────┐   ┌──────────────────────┐
 │      Workout         │   │      Routine         │
 ├──────────────────────┤   ├──────────────────────┤
-│ PK  id          UUID │   │ PK  id          UUID │
-│ FK  userId      UUID │   │ FK  userId      UUID │
+│ PK  id          TEXT │   │ PK  id          TEXT │
+│ FK  userId      TEXT │   │ FK  userId      TEXT │
 │     name             │   │     name             │
 │     date             │   │     focusArea    ?   │
 │     focusArea    ?   │   │     createdAt        │
@@ -46,10 +48,10 @@
           │              ┌──────────────────────┐
           ▼              │  RoutineExercise     │
 ┌──────────────────────┐ ├──────────────────────┤
-│     Exercise         │ │ PK  id          UUID │
-├──────────────────────┤ │ FK  routineId   UUID │
-│ PK  id          UUID │ │     name             │
-│ FK  workoutId   UUID │ ├──────────────────────┤
+│     Exercise         │ │ PK  id          TEXT │
+├──────────────────────┤ │ FK  routineId   TEXT │
+│ PK  id          TEXT │ │     name             │
+│ FK  workoutId   TEXT │ ├──────────────────────┤
 │     name             │ │ 1──N RoutineSet      │
 ├──────────────────────┤ └──────────────────────┘
 │ 1──N  ExerciseSet    │              │
@@ -57,12 +59,12 @@
           │              ┌──────────────────────┐
           ▼              │    RoutineSet        │
 ┌──────────────────────┐ ├──────────────────────┤
-│    ExerciseSet       │ │ PK  id          UUID │
-├──────────────────────┤ │ FK  exerciseId  UUID │
-│ PK  id          UUID │ │     reps        INT  │
-│ FK  exerciseId  UUID │ │     weight      INT  │
+│    ExerciseSet       │ │ PK  id          TEXT │
+├──────────────────────┤ │ FK  exerciseId  TEXT │
+│ PK  id          TEXT │ │     reps        INT  │
+│ FK  exerciseId  TEXT │ │     weight     FLOAT │
 │     reps        INT  │ │     rpe         ?    │
-│     weight      INT  │ │     notes       ?    │
+│     weight     FLOAT │ │     notes       ?    │
 │     rpe         ?    │ └──────────────────────┘
 │     notes       ?    │
 └──────────────────────┘
@@ -76,7 +78,7 @@ Stocke les comptes utilisateurs et les informations d'authentification.
 
 | Colonne | Type | Contraintes | Description |
 |---------|------|------------|-------------|
-| `id` | UUID | PK, auto-généré | Identifiant unique |
+| `id` | TEXT (UUID) | PK, auto-généré | Identifiant unique |
 | `email` | String | UNIQUE, NOT NULL | Adresse email |
 | `passwordHash` | String | NOT NULL | Hash bcrypt du mot de passe |
 | `name` | String | nullable | Prénom ou pseudo |
@@ -92,8 +94,8 @@ Représente une séance d'entraînement réalisée.
 
 | Colonne | Type | Contraintes | Description |
 |---------|------|------------|-------------|
-| `id` | UUID | PK | Identifiant unique |
-| `userId` | UUID | FK → User.id | Propriétaire |
+| `id` | TEXT (UUID) | PK | Identifiant unique |
+| `userId` | TEXT (UUID) | FK → User.id | Propriétaire |
 | `name` | String | NOT NULL | Nom de la séance |
 | `date` | DateTime | NOT NULL | Date de la séance |
 | `focusArea` | String | nullable | Zone ciblée (Pectoraux, Dos…) |
@@ -107,8 +109,8 @@ Exercice réalisé dans une séance.
 
 | Colonne | Type | Contraintes | Description |
 |---------|------|------------|-------------|
-| `id` | UUID | PK | Identifiant unique |
-| `workoutId` | UUID | FK → Workout.id | Séance parente |
+| `id` | TEXT (UUID) | PK | Identifiant unique |
+| `workoutId` | TEXT (UUID) | FK → Workout.id | Séance parente |
 | `name` | String | NOT NULL | Nom de l'exercice |
 
 ### ExerciseSet
@@ -117,20 +119,20 @@ Série individuelle d'un exercice (reps × poids).
 
 | Colonne | Type | Contraintes | Description |
 |---------|------|------------|-------------|
-| `id` | UUID | PK | Identifiant unique |
-| `exerciseId` | UUID | FK → Exercise.id | Exercice parent |
+| `id` | TEXT (UUID) | PK | Identifiant unique |
+| `exerciseId` | TEXT (UUID) | FK → Exercise.id | Exercice parent |
 | `reps` | Int | NOT NULL | Nombre de répétitions |
-| `weight` | Int | NOT NULL | Poids en kg |
-| `rpe` | Int | nullable | Effort perçu (1-10) |
+| `weight` | Float (DOUBLE PRECISION) | NOT NULL | Poids en kg (décimales autorisées) |
+| `rpe` | Int | nullable | Effort perçu. Aucune borne en base ni dans l'API (le champ du front est limité à 0–10) |
 | `notes` | String | nullable | Notes sur la série |
 
 ### Routine / RoutineExercise / RoutineSet
 
-Structure miroir de Workout/Exercise/ExerciseSet pour les templates réutilisables. Même schéma, sans le champ `date`.
+Structure miroir de Workout/Exercise/ExerciseSet pour les templates réutilisables. Même schéma, sans les champs `date` et `notes` (Routine n'a que `name`, `focusArea`, `createdAt`, `updatedAt`).
 
 ## Relations et cascades
 
-Toutes les relations utilisent `onDelete: Cascade` :
+Toutes les relations utilisent `onDelete: Cascade` (en SQL : `ON DELETE CASCADE ON UPDATE CASCADE`, l'`ON UPDATE CASCADE` étant le comportement par défaut de Prisma) :
 
 ```
 User ──(supprimé)──→ tous ses Workouts supprimés
