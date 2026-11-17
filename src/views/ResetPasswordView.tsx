@@ -68,7 +68,7 @@ export function ResetPasswordView() {
                         Nouveau mot de passe
                     </h2>
                     <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                        Choisis un nouveau mot de passe sécurisé.
+                        Choisis un nouveau mot de passe sécurisé (min. 8 caractères).
                     </p>
                 </div>
 
