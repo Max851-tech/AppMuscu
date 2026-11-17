@@ -188,12 +188,6 @@ authRouter.post(
         },
       })
 
-      const resetLink = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password?token=${resetToken}`
-      console.log('---------------------------------------------------')
-      console.log('LIEN DE RÉINITIALISATION (DEV ONLY) :')
-      console.log(resetLink)
-      console.log('---------------------------------------------------')
-
       res.json({ message: 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.' })
     } catch (error) {
       console.error('[Forgot Password error]', error)
