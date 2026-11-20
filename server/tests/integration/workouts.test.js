@@ -133,6 +133,31 @@ describe('Workouts API — /api/workouts', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('returns 400 when date is invalid', async () => {
+      const res = await request(app)
+        .post('/api/workouts')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({ name: 'Leg Day', date: 'pas-une-date', exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
+
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('La date est invalide.')
+      expect(prisma.workout.create).not.toHaveBeenCalled()
+    })
+
+    it('returns 500 without crashing when the database call fails', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      prisma.workout.create.mockRejectedValue(new Error('database unreachable'))
+
+      const res = await request(app)
+        .post('/api/workouts')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({ name: 'Leg Day', date: '2026-01-15', exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
+
+      expect(res.status).toBe(500)
+      expect(res.body.message).toBe('Erreur interne du serveur.')
+      consoleError.mockRestore()
+    })
   })
 
   describe('PUT /api/workouts/:id', () => {
@@ -182,6 +207,19 @@ describe('Workouts API — /api/workouts', () => {
         .send({ name: 'Push Day', date: '2026-01-15', exercises: [] })
 
       expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when date is invalid', async () => {
+      prisma.workout.findFirst.mockResolvedValue(mockWorkout)
+
+      const res = await request(app)
+        .put('/api/workouts/workout-1')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({ name: 'Push Day', date: 'pas-une-date', exercises: [{ name: 'Squat', sets: [{ reps: 5, weight: 100 }] }] })
+
+      expect(res.status).toBe(400)
+      expect(res.body.message).toBe('La date est invalide.')
+      expect(prisma.$transaction).not.toHaveBeenCalled()
     })
 
     it('returns 404 for non-existent workout', async () => {

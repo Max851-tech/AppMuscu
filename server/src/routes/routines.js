@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { requireAuth } from '../middleware/requireAuth.js'
 import { prisma } from '../prisma.js'
+import { asyncHandler } from '../utils/asyncHandler.js'
 
 export const routinesRouter = Router()
 
@@ -38,7 +39,7 @@ const serializeRoutine = (routine) => ({
   updatedAt: routine.updatedAt.toISOString(),
 })
 
-routinesRouter.get('/', async (req, res) => {
+routinesRouter.get('/', asyncHandler(async (req, res) => {
   const routines = await prisma.routine.findMany({
     where: { userId: req.user.id },
     include: {
@@ -50,9 +51,9 @@ routinesRouter.get('/', async (req, res) => {
   })
 
   res.json(routines.map(serializeRoutine))
-})
+}))
 
-routinesRouter.post('/', async (req, res) => {
+routinesRouter.post('/', asyncHandler(async (req, res) => {
   const { name, focusArea, exercises } = req.body ?? {}
 
   if (!name) {
@@ -83,9 +84,9 @@ routinesRouter.post('/', async (req, res) => {
   })
 
   res.status(201).json(serializeRoutine(routine))
-})
+}))
 
-routinesRouter.put('/:id', async (req, res) => {
+routinesRouter.put('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
   const { name, focusArea, exercises } = req.body ?? {}
 
@@ -129,9 +130,9 @@ routinesRouter.put('/:id', async (req, res) => {
   })
 
   res.json(serializeRoutine(updated))
-})
+}))
 
-routinesRouter.delete('/:id', async (req, res) => {
+routinesRouter.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
 
   const routine = await prisma.routine.findFirst({
@@ -145,4 +146,4 @@ routinesRouter.delete('/:id', async (req, res) => {
   await prisma.routine.delete({ where: { id } })
 
   res.status(204).end()
-})
+}))

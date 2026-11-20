@@ -39,7 +39,8 @@ AppMuscu/
 │   │   │   └── rateLimiter.js    # Limitation de débit
 │   │   └── utils/
 │   │       ├── password.js       # Hachage bcrypt
-│   │       └── jwt.js            # Signature/vérification JWT
+│   │       ├── jwt.js            # Signature/vérification JWT
+│   │       └── asyncHandler.js   # Transmet les erreurs des routes async au gestionnaire d'erreurs
 │   ├── prisma/
 │   │   └── schema.prisma         # Schéma de base de données
 │   ├── tests/                    # Tests backend
@@ -215,7 +216,7 @@ push / PR → master
     │
     ├── Tests Frontend ──→ Vitest (32 tests)
     │
-    ├── Tests Backend ──→ Vitest (66 tests)
+    ├── Tests Backend ──→ Vitest (70 tests)
     │
     └── Docker Build ──→ Build image + vérification démarrage
          (après succès des 3 étapes précédentes)
@@ -227,8 +228,8 @@ push / PR → master
 
 | Type | Outil | Cible | Nombre |
 |------|-------|-------|--------|
-| **Unitaire** | Vitest | Utils (password, JWT, config, storage, ID) | 18 |
-| **Intégration** | Vitest + Supertest | Routes API (auth, workouts, routines) | 28 |
+| **Unitaire** | Vitest | Utils backend (password, JWT, config) et frontend (ID, storage, workoutStats) | 31 |
+| **Intégration** | Vitest + Supertest | Routes API (health, auth, workouts, routines) | 55 |
 | **Composant** | Vitest + Testing Library | Vues React (LoginView, StatsView) | 16 |
 | **Build** | GitHub Actions | TypeScript + Vite build | CI |
 
