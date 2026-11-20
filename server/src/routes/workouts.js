@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { requireAuth } from '../middleware/requireAuth.js'
 import { prisma } from '../prisma.js'
+import { asyncHandler } from '../utils/asyncHandler.js'
 
 export const workoutsRouter = Router()
 
@@ -18,6 +19,13 @@ const sanitizeExercise = (exercise) => ({
   name: exercise.name?.toString().trim() ?? '',
   sets: Array.isArray(exercise.sets) ? exercise.sets.map(sanitizeSet) : [],
 })
+
+// new Date('pas-une-date') ne lève pas d'erreur : il renvoie une date invalide,
+// que Prisma refuse ensuite. On la détecte ici pour répondre 400.
+const parseDate = (value) => {
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
 
 const serializeWorkout = (workout) => ({
   id: workout.id,
@@ -40,7 +48,7 @@ const serializeWorkout = (workout) => ({
   updatedAt: workout.updatedAt.toISOString(),
 })
 
-workoutsRouter.get('/', async (req, res) => {
+workoutsRouter.get('/', asyncHandler(async (req, res) => {
   const workouts = await prisma.workout.findMany({
     where: { userId: req.user.id },
     include: {
@@ -54,13 +62,19 @@ workoutsRouter.get('/', async (req, res) => {
   })
 
   res.json(workouts.map(serializeWorkout))
-})
+}))
 
-workoutsRouter.post('/', async (req, res) => {
+workoutsRouter.post('/', asyncHandler(async (req, res) => {
   const { name, date, focusArea, notes, exercises } = req.body ?? {}
 
   if (!name || !date) {
     return res.status(400).json({ message: 'Les champs name et date sont obligatoires.' })
+  }
+
+  const parsedDate = parseDate(date)
+
+  if (!parsedDate) {
+    return res.status(400).json({ message: 'La date est invalide.' })
   }
 
   const exercisePayload = Array.isArray(exercises) ? exercises.map(sanitizeExercise).filter((item) => item.name) : []
@@ -72,7 +86,7 @@ workoutsRouter.post('/', async (req, res) => {
   const workout = await prisma.workout.create({
     data: {
       name: name.toString().trim(),
-      date: new Date(date),
+      date: parsedDate,
       focusArea: focusArea?.toString().trim() || null,
       notes: notes?.toString().trim() || null,
       userId: req.user.id,
@@ -95,9 +109,9 @@ workoutsRouter.post('/', async (req, res) => {
   })
 
   res.status(201).json(serializeWorkout(workout))
-})
+}))
 
-workoutsRouter.put('/:id', async (req, res) => {
+workoutsRouter.put('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
   const { name, date, focusArea, notes, exercises } = req.body ?? {}
 
@@ -113,6 +127,12 @@ workoutsRouter.put('/:id', async (req, res) => {
     return res.status(400).json({ message: 'Les champs name et date sont obligatoires.' })
   }
 
+  const parsedDate = parseDate(date)
+
+  if (!parsedDate) {
+    return res.status(400).json({ message: 'La date est invalide.' })
+  }
+
   const exercisePayload = Array.isArray(exercises) ? exercises.map(sanitizeExercise).filter((item) => item.name) : []
 
   if (exercisePayload.length === 0) {
@@ -126,7 +146,7 @@ workoutsRouter.put('/:id', async (req, res) => {
       where: { id },
       data: {
         name: name.toString().trim(),
-        date: new Date(date),
+        date: parsedDate,
         focusArea: focusArea?.toString().trim() || null,
         notes: notes?.toString().trim() || null,
         exercises: {
@@ -149,9 +169,9 @@ workoutsRouter.put('/:id', async (req, res) => {
   })
 
   res.json(serializeWorkout(updated))
-})
+}))
 
-workoutsRouter.delete('/:id', async (req, res) => {
+workoutsRouter.delete('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params
 
   const workout = await prisma.workout.findFirst({
@@ -165,5 +185,5 @@ workoutsRouter.delete('/:id', async (req, res) => {
   await prisma.workout.delete({ where: { id } })
 
   res.status(204).end()
-})
+}))
 

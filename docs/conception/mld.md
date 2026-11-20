@@ -2,17 +2,17 @@
 
 Dérivé du [MCD](mcd.png) et vérifié contre `server/prisma/schema.prisma`.
 
-Notation : la clé primaire est <u>soulignée</u>, une clé étrangère est préfixée par `#`.
+Notation : la clé primaire est <ins>soulignée</ins>, une clé étrangère est préfixée par `#`.
 
 ## Schéma relationnel
 
-- **User** (<u>id</u>, email, passwordHash, name, avatarUrl, createdAt, updatedAt, resetToken, resetTokenExpiry)
-- **Workout** (<u>id</u>, name, date, focusArea, notes, createdAt, updatedAt, #userId)
-- **Exercise** (<u>id</u>, name, #workoutId)
-- **ExerciseSet** (<u>id</u>, reps, weight, rpe, notes, #exerciseId)
-- **Routine** (<u>id</u>, name, focusArea, createdAt, updatedAt, #userId)
-- **RoutineExercise** (<u>id</u>, name, #routineId)
-- **RoutineSet** (<u>id</u>, reps, weight, rpe, notes, #exerciseId)
+- **User** (<ins>id</ins>, email, passwordHash, name, avatarUrl, createdAt, updatedAt, resetToken, resetTokenExpiry)
+- **Workout** (<ins>id</ins>, name, date, focusArea, notes, createdAt, updatedAt, #userId)
+- **Exercise** (<ins>id</ins>, name, #workoutId)
+- **ExerciseSet** (<ins>id</ins>, reps, weight, rpe, notes, #exerciseId)
+- **Routine** (<ins>id</ins>, name, focusArea, createdAt, updatedAt, #userId)
+- **RoutineExercise** (<ins>id</ins>, name, #routineId)
+- **RoutineSet** (<ins>id</ins>, reps, weight, rpe, notes, #exerciseId)
 
 ## Clés étrangères
 
@@ -30,7 +30,7 @@ Attention : dans `RoutineSet`, la clé étrangère s'appelle `exerciseId`, comme
 ## Règles de passage MCD → MLD appliquées
 
 1. **Chaque entité devient une table.** Son identifiant devient la clé primaire (`id`).
-2. **Association binaire de type (0,N)–(1,1) ou (1,N)–(1,1)** : l'association disparaît. La table du côté **1,1** reçoit une clé étrangère vers la table du côté N. Les six associations du MCD sont toutes de ce type. Il n'y a donc **aucune table d'association**.
+2. **Association binaire de type (0,N)–(1,1) ou (1,N)–(1,1)** : l'association disparaît. L'entité qui porte la cardinalité **1,1** reçoit en clé étrangère l'identifiant de l'autre entité de l'association. Exemple : `Workout` porte 1,1 dans POSSÉDER, donc la table `Workout` reçoit `#userId`. Les six associations du MCD sont toutes de ce type. Il n'y a donc **aucune table d'association**.
 3. **Aucune association N–N** : aucune table de jointure n'est nécessaire.
 4. Les associations ne portent aucun attribut. Aucune colonne ne leur est ajoutée.
 

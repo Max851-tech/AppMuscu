@@ -6,7 +6,7 @@ Documents Merise de la base PostgreSQL d'AppMuscu.
 
 | Fichier | Contenu |
 |---|---|
-| [mcd.mmd](mcd.mmd) | MCD : script Mocodo (source) |
+| [mcd.mcd](mcd.mcd) | MCD : script Mocodo (source) |
 | [mcd.svg](mcd.svg) / [mcd.png](mcd.png) | MCD : export image |
 | [mld.md](mld.md) | MLD : schéma relationnel, clés primaires soulignées, clés étrangères préfixées par `#` |
 | [mpd.sql](mpd.sql) | MPD : script SQL PostgreSQL de l'état final (généré par Prisma) |
@@ -20,17 +20,15 @@ Documents Merise de la base PostgreSQL d'AppMuscu.
 
 ### MCD (Mocodo 4.3.3)
 
-Mocodo n'ouvre que les fichiers `.mcd` : il faut copier le script avant de le compiler.
-
 ```bash
 pip install mocodo
-cp docs/conception/mcd.mmd /tmp/mcd.mcd
-mocodo --input /tmp/mcd.mcd
+cd docs/conception
+mocodo --input mcd.mcd
 ```
 
-La commande produit `mcd.svg`. Mocodo ne sait produire un PNG (`--svg_to png`) que si CairoSVG fonctionne, ce qui n'est pas le cas par défaut sous Windows. Le `mcd.png` de ce dossier est une capture du SVG faite avec un navigateur headless (Edge), à l'échelle ×2.
+La commande produit `mcd.svg` (et un fichier de travail `mcd_geo.json`, inutile à conserver). Mocodo ne sait produire un PNG (`--svg_to png`) que si CairoSVG fonctionne, ce qui n'est pas le cas par défaut sous Windows. Le `mcd.png` de ce dossier est une capture du SVG faite avec un navigateur headless (Edge), à l'échelle ×2.
 
-On peut aussi coller le contenu de `mcd.mmd` sur https://www.mocodo.net.
+On peut aussi coller le contenu de `mcd.mcd` sur https://www.mocodo.net.
 
 ### MPD
 

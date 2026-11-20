@@ -108,6 +108,20 @@ describe('Routines API — /api/routines', () => {
 
       expect(res.status).toBe(400)
     })
+
+    it('returns 500 without crashing when the database call fails', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      prisma.routine.create.mockRejectedValue(new Error('database unreachable'))
+
+      const res = await request(app)
+        .post('/api/routines')
+        .set('Cookie', [`auth=${makeToken()}`])
+        .send({ name: 'Push', exercises: [{ name: 'Bench Press', sets: [{ reps: 10, weight: 80 }] }] })
+
+      expect(res.status).toBe(500)
+      expect(res.body.message).toBe('Erreur interne du serveur.')
+      consoleError.mockRestore()
+    })
   })
 
   describe('PUT /api/routines/:id', () => {

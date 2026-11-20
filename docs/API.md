@@ -242,7 +242,7 @@ Crée une nouvelle séance.
 | Champ | Type | Requis | Description |
 |-------|------|--------|-------------|
 | `name` | string | oui | Nom de la séance |
-| `date` | string (ISO) | oui | Date de la séance |
+| `date` | string (ISO) | oui | Date de la séance. Une date invalide renvoie `400`. |
 | `focusArea` | string | non | Zone musculaire ciblée |
 | `notes` | string | non | Notes libres |
 | `exercises` | array | oui | Au moins 1 exercice |
@@ -256,7 +256,7 @@ Crée une nouvelle séance.
 **Réponses** :
 
 - `201` — Séance créée (retourne l'objet complet)
-- `400` — Champs obligatoires manquants ou aucun exercice
+- `400` — Champs obligatoires manquants, date invalide (`La date est invalide.`) ou aucun exercice
 
 ---
 
@@ -269,7 +269,7 @@ Met à jour une séance existante. Les exercices sont recréés entièrement (de
 **Réponses** :
 
 - `200` — Séance mise à jour
-- `400` — Validation échouée
+- `400` — Validation échouée (champs manquants, date invalide ou aucun exercice)
 - `404` — Séance introuvable
 
 ---
@@ -289,7 +289,7 @@ Supprime une séance et tous ses exercices/séries (cascade).
 
 > Toutes les routes nécessitent une authentification.
 
-Les routines sont des templates de séances réutilisables. L'API est identique à celle des workouts, sans le champ `date`.
+Les routines sont des templates de séances réutilisables. L'API est identique à celle des workouts, sans les champs `date` et `notes`.
 
 ### `GET /api/routines`
 
@@ -340,7 +340,7 @@ Supprime une routine. **Réponses** : `204` / `404`
 | `404` | Ressource introuvable |
 | `409` | Conflit (email déjà utilisé) |
 | `429` | Trop de requêtes (rate limit atteint) |
-| `500` | Erreur interne du serveur |
+| `500` | Erreur interne du serveur (par exemple base de données injoignable). Le serveur continue de répondre aux requêtes suivantes. |
 
 Les erreurs sont retournées au format :
 ```json
